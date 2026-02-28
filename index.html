@@ -1,844 +1,577 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sunlogic — Không gian học tập</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet" />
-  <style>
-    :root {
-      --cream: #FDFDFD;
-      --orange: #FF512F;
-      --gold: #F09819;
-      --blue: #4FACFE;
-      --green: #22C55E;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sunlogic - Khai sáng tư duy</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        bgCream: '#FDFDFD',
+                        primaryOrange: '#FF512F',
+                        primaryYellow: '#F09819',
+                        accentBlue: '#4FACFE',
+                        accentGreen: '#22C55E'
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* CSS Thuần - Hiệu ứng và Glassmorphism */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #FDFDFD; overflow-x: hidden; }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+            border-radius: 1rem;
+        }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: 'DM Sans', sans-serif;
-      background-color: var(--cream);
-      min-height: 100vh;
-      overflow-x: hidden;
-    }
+        .gradient-text {
+            background: linear-gradient(to right, #FF512F, #F09819);
+            -webkit-background-clip: text;
+            color: transparent;
+        }
 
-    h1, h2, h3, .font-display { font-family: 'Sora', sans-serif; }
+        .gradient-bg {
+            background: linear-gradient(to right, #FF512F, #F09819);
+        }
 
-    /* ─── Gradient helpers ─── */
-    .grad-primary { background: linear-gradient(135deg, var(--orange), var(--gold)); }
-    .grad-blue    { background: linear-gradient(135deg, var(--blue), #00f2fe); }
-    .text-grad {
-      background: linear-gradient(135deg, var(--orange), var(--gold));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
+        /* Nền bong bóng mờ ảo (Blobs) */
+        .blob {
+            position: absolute; filter: blur(80px); z-index: -1; opacity: 0.4; border-radius: 50%;
+            animation: float 10s infinite ease-in-out alternate;
+        }
+        .blob-1 { top: -10%; left: -10%; width: 400px; height: 400px; background: #FF512F; }
+        .blob-2 { bottom: -10%; right: -10%; width: 500px; height: 500px; background: #4FACFE; animation-delay: -5s;}
 
-    /* ─── Glass card ─── */
-    .glass {
-      background: rgba(255,255,255,0.60);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border: 1px solid rgba(255,255,255,0.35);
-      box-shadow: 0 8px 32px rgba(0,0,0,0.08);
-      border-radius: 1.25rem;
-    }
+        @keyframes float {
+            0% { transform: translateY(0) scale(1); }
+            100% { transform: translateY(30px) scale(1.1); }
+        }
 
-    /* ─── Login BG ─── */
-    #login-view {
-      background: linear-gradient(160deg, #fff7ed 0%, #fff1f2 40%, #eff6ff 100%);
-      min-height: 100vh;
-      position: relative;
-      overflow: hidden;
-    }
-    #login-view::before {
-      content: '';
-      position: absolute;
-      width: 520px; height: 520px;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(255,81,47,0.12) 0%, transparent 70%);
-      top: -100px; left: -100px;
-      pointer-events: none;
-    }
-    #login-view::after {
-      content: '';
-      position: absolute;
-      width: 400px; height: 400px;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(79,172,254,0.13) 0%, transparent 70%);
-      bottom: -80px; right: -80px;
-      pointer-events: none;
-    }
+        /* Hiệu ứng đập của trái tim */
+        .pulse-heart { animation: pulse 1.5s infinite; }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
 
-    /* ─── Input ─── */
-    .input-field {
-      width: 100%;
-      padding: 0.75rem 1rem;
-      border: 1.5px solid rgba(0,0,0,0.1);
-      border-radius: 0.75rem;
-      background: rgba(255,255,255,0.8);
-      font-family: 'DM Sans', sans-serif;
-      font-size: 0.95rem;
-      outline: none;
-      transition: border-color 0.2s, box-shadow 0.2s;
-    }
-    .input-field:focus {
-      border-color: var(--orange);
-      box-shadow: 0 0 0 3px rgba(255,81,47,0.12);
-    }
+        /* Hiệu ứng bay của sticker cổ vũ */
+        .flying-emoji {
+            position: fixed; bottom: 50px; left: 50%; font-size: 2rem; z-index: 1000;
+            animation: flyUp 2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+            pointer-events: none;
+        }
+        @keyframes flyUp {
+            0% { transform: translate(-50%, 0) scale(0.5); opacity: 1; }
+            100% { transform: translate(calc(-50% + (var(--randX) * 100px)), -400px) scale(1.5); opacity: 0; }
+        }
 
-    /* ─── Buttons ─── */
-    .btn-primary {
-      width: 100%;
-      padding: 0.8rem 1rem;
-      border-radius: 0.75rem;
-      border: none;
-      cursor: pointer;
-      font-family: 'Sora', sans-serif;
-      font-weight: 600;
-      font-size: 0.95rem;
-      color: #fff;
-      background: linear-gradient(135deg, var(--orange), var(--gold));
-      box-shadow: 0 4px 15px rgba(255,81,47,0.35);
-      transition: transform 0.15s, box-shadow 0.15s;
-    }
-    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(255,81,47,0.45); }
-    .btn-primary:active { transform: translateY(0); }
-
-    .btn-google {
-      width: 100%;
-      padding: 0.75rem 1rem;
-      border-radius: 0.75rem;
-      border: 1.5px solid rgba(0,0,0,0.12);
-      cursor: pointer;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 0.95rem;
-      background: #fff;
-      display: flex; align-items: center; justify-content: center; gap: 0.5rem;
-      transition: background 0.15s, box-shadow 0.15s;
-    }
-    .btn-google:hover { background: #f9fafb; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-
-    /* ─── Pomodoro ring ─── */
-    .pomodoro-ring {
-      width: 180px; height: 180px;
-      border-radius: 50%;
-      border: 5px solid transparent;
-      background: linear-gradient(white, white) padding-box,
-                  linear-gradient(135deg, var(--orange), var(--gold)) border-box;
-      display: flex; align-items: center; justify-content: center;
-      position: relative;
-      box-shadow: 0 0 30px rgba(255,81,47,0.2);
-      transition: box-shadow 0.3s;
-    }
-    .pomodoro-ring.running {
-      box-shadow: 0 0 40px rgba(255,81,47,0.4);
-      animation: pulse-ring 2s ease-in-out infinite;
-    }
-    @keyframes pulse-ring {
-      0%, 100% { box-shadow: 0 0 30px rgba(255,81,47,0.3); }
-      50%       { box-shadow: 0 0 50px rgba(255,81,47,0.55); }
-    }
-
-    /* ─── Pomodoro control buttons ─── */
-    .pomo-btn {
-      width: 2.5rem; height: 2.5rem;
-      border-radius: 50%;
-      border: none;
-      cursor: pointer;
-      font-size: 1.1rem;
-      display: flex; align-items: center; justify-content: center;
-      transition: transform 0.15s;
-    }
-    .pomo-btn:hover { transform: scale(1.1); }
-
-    /* ─── Tab system ─── */
-    .tab-btn {
-      padding: 0.4rem 1rem;
-      border-radius: 9999px;
-      border: none;
-      cursor: pointer;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 0.85rem;
-      background: transparent;
-      color: #64748b;
-      transition: all 0.2s;
-    }
-    .tab-btn.active {
-      background: linear-gradient(135deg, var(--orange), var(--gold));
-      color: #fff;
-      box-shadow: 0 2px 8px rgba(255,81,47,0.3);
-    }
-
-    /* ─── Task list ─── */
-    .task-item {
-      display: flex; align-items: center; gap: 0.6rem;
-      padding: 0.6rem 0.75rem;
-      border-radius: 0.6rem;
-      background: rgba(255,255,255,0.7);
-      margin-bottom: 0.4rem;
-      transition: background 0.15s;
-    }
-    .task-item:hover { background: rgba(255,255,255,0.95); }
-    .task-item input[type=checkbox] {
-      accent-color: var(--orange);
-      width: 1rem; height: 1rem; cursor: pointer; flex-shrink: 0;
-    }
-    .task-item label { cursor: pointer; font-size: 0.9rem; color: #374151; transition: all 0.2s; }
-    .task-item input:checked + label { text-decoration: line-through; color: #9ca3af; }
-
-    /* ─── AI Chat ─── */
-    #chat-widget {
-      position: fixed;
-      bottom: 1.5rem; right: 1.5rem;
-      width: 320px;
-      z-index: 50;
-    }
-    .chat-bubble-user {
-      background: linear-gradient(135deg, var(--orange), var(--gold));
-      color: #fff; border-radius: 1rem 1rem 0.25rem 1rem;
-      padding: 0.55rem 0.9rem; font-size: 0.85rem; max-width: 85%; margin-left: auto;
-    }
-    .chat-bubble-ai {
-      background: rgba(255,255,255,0.9);
-      color: #1f2937; border-radius: 1rem 1rem 1rem 0.25rem;
-      padding: 0.55rem 0.9rem; font-size: 0.85rem; max-width: 90%;
-      border: 1px solid rgba(0,0,0,0.06);
-      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-    }
-    .typing-dots span {
-      display: inline-block; width: 6px; height: 6px; border-radius: 50%;
-      background: #9ca3af; margin: 0 1px;
-      animation: bounce-dot 1.2s infinite;
-    }
-    .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
-    .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
-    @keyframes bounce-dot {
-      0%, 80%, 100% { transform: translateY(0); }
-      40%            { transform: translateY(-6px); }
-    }
-
-    /* ─── Flying emoji ─── */
-    .flying-emoji {
-      position: fixed;
-      font-size: 1.5rem;
-      pointer-events: none;
-      animation: fly-up 2s ease-out forwards;
-      z-index: 9999;
-    }
-    @keyframes fly-up {
-      0%   { transform: translateY(0) scale(1); opacity: 1; }
-      100% { transform: translateY(-220px) scale(0.5); opacity: 0; }
-    }
-
-    /* ─── Streak badge ─── */
-    .streak-badge {
-      background: linear-gradient(135deg, #ff9a00, #ff512f);
-      color: #fff;
-      border-radius: 9999px;
-      padding: 0.2rem 0.6rem;
-      font-size: 0.8rem;
-      font-family: 'Sora', sans-serif;
-      font-weight: 600;
-    }
-
-    /* ─── Scrollbar ─── */
-    ::-webkit-scrollbar { width: 5px; }
-    ::-webkit-scrollbar-thumb { background: rgba(255,81,47,0.3); border-radius: 9999px; }
-
-    /* ─── App BG ─── */
-    #app-view {
-      background: linear-gradient(160deg, #fff7ed 0%, #fffbf5 50%, #f0f9ff 100%);
-      min-height: 100vh;
-    }
-
-    /* ─── Noise texture overlay ─── */
-    #app-view::before {
-      content: '';
-      position: fixed; inset: 0;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.02'/%3E%3C/svg%3E");
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    /* ─── Animate in ─── */
-    @keyframes slide-up {
-      from { opacity: 0; transform: translateY(20px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-    .anim-in { animation: slide-up 0.45s ease-out both; }
-    .anim-in-d1 { animation-delay: 0.05s; }
-    .anim-in-d2 { animation-delay: 0.12s; }
-    .anim-in-d3 { animation-delay: 0.19s; }
-    .anim-in-d4 { animation-delay: 0.26s; }
-    .anim-in-d5 { animation-delay: 0.33s; }
-
-    /* responsive */
-    @media (max-width: 768px) {
-      #chat-widget { width: calc(100vw - 2rem); right: 1rem; }
-    }
-  </style>
+        /* Đồng hồ Pomodoro SVG */
+        .pomodoro-ring {
+            transition: stroke-dashoffset 1s linear;
+            stroke: url(#gradient);
+        }
+        
+        /* Khung chat AI */
+        #ai-chat-widget { transition: transform 0.3s ease; }
+        .chat-hidden { transform: translateY(120%); }
+    </style>
 </head>
-<body>
+<body class="text-gray-800 relative min-h-screen flex flex-col">
 
-<!-- ═══════════════════════════════════════════════
-     PHẦN 1 — MÀN HÌNH ĐĂNG NHẬP
-═══════════════════════════════════════════════ -->
-<div id="login-view" class="flex items-center justify-center min-h-screen p-6">
-  <div class="w-full max-w-5xl grid md:grid-cols-2 gap-8 items-center relative z-10">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
 
-    <!-- Left col: inspirational copy -->
-    <div class="anim-in">
-      <div class="flex items-center gap-2 mb-6">
-        <div class="w-9 h-9 rounded-xl grad-primary flex items-center justify-center text-white text-lg font-bold font-display shadow-lg">S</div>
-        <span class="font-display text-xl font-bold text-gray-800">Sunlogic</span>
-      </div>
-      <h1 class="font-display text-4xl md:text-5xl font-800 leading-tight text-gray-900 mb-4">
-        Học thông minh hơn,<br/>
-        <span class="text-grad">không phải nhiều hơn.</span>
-      </h1>
-      <p class="text-gray-500 text-lg leading-relaxed mb-8">
-        Kết hợp Pomodoro, gamification và trợ giảng AI — tất cả trong một không gian tập trung duy nhất.
-      </p>
-      <div class="flex flex-col gap-3">
-        <div class="flex items-center gap-3 text-sm text-gray-500">
-          <div class="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center text-base">🎯</div>
-          <span>Hệ thống Streak — giữ lửa học tập mỗi ngày</span>
-        </div>
-        <div class="flex items-center gap-3 text-sm text-gray-500">
-          <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-base">🤖</div>
-          <span>Trợ giảng AI sẵn sàng 24/7 giải đáp thắc mắc</span>
-        </div>
-        <div class="flex items-center gap-3 text-sm text-gray-500">
-          <div class="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center text-base">👥</div>
-          <span>Cộng đồng học tập hơn 1,200 người đồng hành</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Right col: login form -->
-    <div class="glass p-8 anim-in anim-in-d1">
-      <h2 class="font-display text-2xl font-bold text-gray-800 mb-1">Chào mừng trở lại 👋</h2>
-      <p class="text-gray-400 text-sm mb-6">Đăng nhập để tiếp tục hành trình học tập</p>
-
-      <div class="flex flex-col gap-4">
-        <div>
-          <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">Email</label>
-          <input id="login-email" type="email" placeholder="email@example.com" class="input-field" />
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">Mật khẩu</label>
-          <input id="login-pass" type="password" placeholder="••••••••" class="input-field"
-            onkeydown="if(event.key==='Enter')login()" />
-        </div>
-
-        <button onclick="login()" class="btn-primary mt-1">
-          🚀 Vào không gian học tập
-        </button>
-
-        <div class="flex items-center gap-3 text-gray-300 text-sm">
-          <div class="flex-1 h-px bg-gray-200"></div>
-          <span class="text-gray-400">hoặc</span>
-          <div class="flex-1 h-px bg-gray-200"></div>
-        </div>
-
-        <button onclick="login()" class="btn-google">
-          <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.3 0 6.2 1.1 8.5 3.3l6.3-6.3C34.8 2.7 29.7.5 24 .5 14.7.5 6.8 6 3 13.9l7.4 5.7C12.2 13.4 17.6 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.2-.4-4.7H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.4 5.7c4.3-4 6.8-9.9 6.8-17.2z"/><path fill="#FBBC05" d="M10.4 28.4A14.4 14.4 0 0 1 9.5 24c0-1.5.3-3 .7-4.4L2.8 13.9A23.8 23.8 0 0 0 .5 24c0 3.8.9 7.4 2.4 10.6l7.5-6.2z"/><path fill="#34A853" d="M24 47.5c5.7 0 10.5-1.9 14-5.1l-7.4-5.7c-1.9 1.3-4.3 2-6.6 2-6.3 0-11.7-4-13.6-9.5l-7.4 5.7C6.8 42 14.7 47.5 24 47.5z"/></svg>
-          Tiếp tục với Google
-        </button>
-
-        <p class="text-center text-xs text-gray-400 mt-1">
-          Chưa có tài khoản? <span class="text-orange-400 cursor-pointer hover:underline" onclick="login()">Đăng ký ngay →</span>
-        </p>
-      </div>
-    </div>
-  </div>
-</div>
-
-
-<!-- ═══════════════════════════════════════════════
-     PHẦN 2 — KHÔNG GIAN HỌC TẬP
-═══════════════════════════════════════════════ -->
-<div id="app-view" style="display:none;">
-
-  <!-- Header -->
-  <header class="sticky top-0 z-40 bg-white/80 backdrop-blur-lg border-b border-white/50 shadow-sm">
-    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
-
-      <!-- Brand -->
-      <div class="flex items-center gap-2">
-        <div class="w-8 h-8 rounded-lg grad-primary flex items-center justify-center text-white font-bold font-display text-sm shadow">S</div>
-        <span class="font-display font-bold text-gray-800 hidden sm:block">Sunlogic</span>
-      </div>
-
-      <!-- Stats row -->
-      <div class="flex items-center gap-3 flex-wrap justify-end">
-        <!-- Hearts -->
-        <div id="hearts-row" class="flex gap-0.5 text-lg"></div>
-
-        <!-- Total time -->
-        <div class="flex items-center gap-1.5 glass px-3 py-1.5 text-xs font-semibold text-gray-600">
-          ⏱ <span id="total-time">0</span> phút
-        </div>
-
-        <!-- Streak -->
-        <div class="streak-badge flex items-center gap-1">
-          🔥 <span id="streak-count">0</span> ngày
-        </div>
-
-        <!-- Avatar -->
-        <div class="w-8 h-8 rounded-full grad-primary flex items-center justify-center text-white font-bold text-sm font-display cursor-pointer" id="avatar-el">?</div>
-      </div>
-    </div>
-  </header>
-
-  <!-- Main dashboard -->
-  <main class="max-w-6xl mx-auto px-4 py-6 grid grid-cols-1 md:grid-cols-3 gap-5 relative z-10">
-
-    <!-- ── Col 1: Pomodoro ── -->
-    <div class="md:col-span-1 glass p-6 flex flex-col items-center gap-5 anim-in">
-      <div>
-        <h2 class="font-display font-bold text-gray-800 text-lg text-center">Đồng hồ Pomodoro</h2>
-        <p class="text-xs text-gray-400 text-center">Tập trung 25 phút • Nghỉ 5 phút</p>
-      </div>
-
-      <!-- Ring -->
-      <div class="pomodoro-ring" id="pomo-ring">
-        <div class="text-center">
-          <div id="pomo-display" class="font-display font-bold text-3xl text-gray-800">25:00</div>
-          <div id="pomo-status" class="text-xs text-gray-400 mt-0.5">Sẵn sàng</div>
-        </div>
-      </div>
-
-      <!-- Controls -->
-      <div class="flex gap-3">
-        <button class="pomo-btn grad-primary text-white shadow-lg shadow-orange-200" onclick="startPomo()" title="Bắt đầu">▶</button>
-        <button class="pomo-btn bg-gray-100 text-gray-600" onclick="pausePomo()" title="Tạm dừng">⏸</button>
-        <button class="pomo-btn bg-gray-100 text-gray-600" onclick="resetPomo()" title="Đặt lại">↺</button>
-      </div>
-
-      <!-- Session count -->
-      <div class="w-full text-center">
-        <p class="text-xs text-gray-400">Phiên hôm nay: <span id="session-count" class="font-bold text-orange-500">0</span></p>
-      </div>
-    </div>
-
-    <!-- ── Col 2-3: Checklist + Community ── -->
-    <div class="md:col-span-2 flex flex-col gap-5">
-
-      <!-- Checklist -->
-      <div class="glass p-6 anim-in anim-in-d2">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="font-display font-bold text-gray-800 text-lg">📋 Checklist & Lịch học</h2>
-          <button onclick="addSampleSchedule()" class="text-xs px-3 py-1.5 rounded-lg bg-orange-50 text-orange-500 font-semibold hover:bg-orange-100 transition-colors">✨ Tạo lịch mẫu</button>
-        </div>
-
-        <div class="flex gap-2 mb-4">
-          <input id="task-input" type="text" placeholder="Thêm nhiệm vụ mới..." class="input-field" style="padding: 0.6rem 0.9rem;"
-            onkeydown="if(event.key==='Enter')addTask()" />
-          <button onclick="addTask()" class="btn-primary" style="width:auto; padding: 0.6rem 1.2rem; white-space:nowrap;">+ Thêm</button>
-        </div>
-
-        <ul id="task-list" class="max-h-52 overflow-y-auto pr-1"></ul>
-        <p id="task-empty" class="text-center text-sm text-gray-400 py-4 hidden">Chưa có nhiệm vụ nào — hãy thêm mới! 🎯</p>
-      </div>
-
-      <!-- Community -->
-      <div class="glass p-6 anim-in anim-in-d3">
-        <h2 class="font-display font-bold text-gray-800 text-lg mb-3">🌐 Cộng đồng</h2>
-
-        <!-- Tabs -->
-        <div class="flex gap-1 mb-4 bg-gray-50 rounded-xl p-1 w-fit">
-          <button class="tab-btn active" id="tab-room" onclick="switchTab('room')">Phòng tự học</button>
-          <button class="tab-btn" id="tab-qa" onclick="switchTab('qa')">Q&amp;A</button>
-        </div>
-
-        <!-- Room panel -->
-        <div id="panel-room">
-          <div class="flex items-center justify-between glass p-4 mb-3">
-            <div>
-              <p class="font-semibold text-gray-700">📚 Phòng học chung</p>
-              <p class="text-sm text-gray-400 mt-0.5">Có <span class="font-bold text-green-500">1,204</span> người đang học ngay bây giờ</p>
+    <div id="login-view" class="flex flex-col md:flex-row h-screen w-full items-center justify-center p-6 gap-10">
+        <div class="md:w-1/2 max-w-lg text-center md:text-left">
+            <div class="flex items-center justify-center md:justify-start gap-3 mb-6">
+                <div class="w-16 h-16 rounded-full bg-white shadow-lg border-4 border-accentBlue flex items-center justify-center relative overflow-hidden">
+                    <i class="fa-regular fa-lightbulb text-2xl text-primaryYellow z-10"></i>
+                    <div class="absolute inset-0 bg-accentBlue opacity-20"></div>
+                </div>
+                <h1 class="text-5xl font-extrabold gradient-text tracking-tight">Sunlogic</h1>
             </div>
-            <div class="flex items-center gap-1">
-              <span id="online-dot" class="w-2 h-2 rounded-full bg-green-400 animate-pulse block"></span>
-              <span class="text-xs text-green-500">Live</span>
-            </div>
-          </div>
-          <button onclick="cheer()" class="btn-primary" style="width:auto; padding:0.6rem 1.4rem;">
-            ❤️ Cổ vũ mọi người
-          </button>
-        </div>
-
-        <!-- Q&A panel -->
-        <div id="panel-qa" style="display:none;">
-          <div class="glass p-4 rounded-xl">
-            <div class="flex items-center gap-2 mb-2">
-              <div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-xs font-bold">TN</div>
-              <div>
-                <p class="font-semibold text-sm text-gray-700">Thái Nguyên</p>
-                <p class="text-xs text-gray-400">2 giờ trước • Toán 12</p>
-              </div>
-              <span class="ml-auto text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded-full font-medium">Đã giải</span>
-            </div>
-            <p class="font-display font-semibold text-gray-800 mb-1">💡 Mẹo nhớ hệ trục tọa độ Oxyz</p>
-            <p class="text-sm text-gray-600 leading-relaxed">
-              Để nhớ thứ tự các trục, dùng "Quy tắc bàn tay phải": Ngón cái → Ox, ngón trỏ → Oy, ngón giữa → Oz. Áp dụng vào tích có hướng: <strong>Ox × Oy = Oz</strong>. Khi làm bài véc-tơ pháp tuyến, cứ theo quy tắc này là không bao giờ nhầm chiều! 🤌
+            <h2 class="text-3xl font-bold mb-4">Học thông minh hơn,<br>không cần học cực hơn.</h2>
+            <p class="text-gray-600 text-lg leading-relaxed">
+                Học tập giống như leo núi. Nỗ lực mù quáng chỉ mang lại áp lực vô hình. Khi sự chăm chỉ được soi đường bởi phương pháp logic, việc học sẽ trở về với bản chất nguyên thủy đẹp đẽ của nó.
             </p>
-            <div class="flex items-center gap-4 mt-3 text-xs text-gray-400">
-              <span>👍 24 lượt thích</span>
-              <span>💬 8 bình luận</span>
-            </div>
-          </div>
         </div>
-      </div>
 
-    </div><!-- end col 2-3 -->
-  </main>
+        <div class="md:w-1/2 w-full max-w-md">
+            <div class="glass-card p-8">
+                <h3 class="text-2xl font-bold text-center mb-6">Bắt đầu hành trình</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-semibold mb-1">Email của bạn</label>
+                        <input type="email" id="login-email" placeholder="hocsinh@gmail.com" class="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primaryOrange bg-white/80">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold mb-1">Mật khẩu</label>
+                        <input type="password" id="login-pass" placeholder="••••••••" class="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primaryOrange bg-white/80">
+                    </div>
+                    <button onclick="handleLogin()" class="w-full gradient-bg text-white font-bold py-3 rounded-lg shadow-lg hover:shadow-xl transition transform hover:-translate-y-1">
+                        Vào không gian học tập
+                    </button>
+                    
+                    <div class="relative flex py-2 items-center">
+                        <div class="flex-grow border-t border-gray-300"></div>
+                        <span class="flex-shrink-0 mx-4 text-gray-400 text-sm">Hoặc</span>
+                        <div class="flex-grow border-t border-gray-300"></div>
+                    </div>
 
-</div><!-- end #app-view -->
-
-
-<!-- ═══════════════════════════════════════════════
-     WIDGET CHAT AI (hiện sau khi login)
-═══════════════════════════════════════════════ -->
-<div id="chat-widget" style="display:none;">
-  <div class="glass overflow-hidden" style="box-shadow: 0 16px 48px rgba(0,0,0,0.12);">
-
-    <!-- Header -->
-    <div class="grad-primary px-4 py-3 flex items-center gap-2">
-      <div class="w-6 h-6 rounded-full bg-white/30 flex items-center justify-center text-sm">🤖</div>
-      <span class="font-display font-semibold text-white text-sm">Trợ giảng AI</span>
-      <span class="ml-auto text-xs bg-white/20 text-white rounded-full px-2 py-0.5">Online</span>
-      <button onclick="toggleChat()" class="text-white/70 hover:text-white text-lg ml-1 leading-none">⌄</button>
+                    <button class="w-full bg-white text-gray-700 font-semibold py-3 rounded-lg border border-gray-300 shadow-sm hover:bg-gray-50 transition flex items-center justify-center gap-2">
+                        <i class="fa-brands fa-google text-red-500"></i> Tiếp tục với Google
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- Messages -->
-    <div id="chat-body" class="p-3 flex flex-col gap-2 overflow-y-auto" style="height:220px; background: rgba(255,255,255,0.5);">
-      <div class="chat-bubble-ai">Xin chào! Mình là trợ giảng AI của Sunlogic. Bạn cần giải đáp điều gì không? 😊</div>
+
+    <div id="app-view" style="display: none;" class="w-full max-w-7xl mx-auto p-4 md:p-6 flex-grow flex flex-col">
+        
+        <header class="glass-card flex flex-wrap items-center justify-between p-4 mb-6 sticky top-4 z-50">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-white shadow flex items-center justify-center border-2 border-accentBlue">
+                    <i class="fa-regular fa-lightbulb text-primaryYellow"></i>
+                </div>
+                <span class="font-bold text-xl gradient-text hidden sm:block">Sunlogic</span>
+            </div>
+
+            <div class="flex items-center gap-4 md:gap-8 bg-white/50 px-4 py-2 rounded-full border border-gray-100 shadow-inner">
+                <div class="flex items-center gap-1 font-bold text-gray-700 tooltip" title="Chuỗi ngày học">
+                    <span class="text-xl">🔥</span>
+                    <span id="streak-count">0</span>
+                </div>
+                <div id="hearts-container" class="flex gap-1 text-red-500 text-lg pulse-heart">
+                    </div>
+                <div class="flex items-center gap-1 font-bold text-gray-700 tooltip" title="Tổng phút tập trung">
+                    <i class="fa-solid fa-clock text-accentBlue"></i>
+                    <span id="total-time">0</span>p
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <div class="hidden md:block text-right">
+                    <p id="user-display-name" class="font-bold text-sm">Học sinh</p>
+                    <p class="text-xs text-gray-500 cursor-pointer hover:text-red-500" onclick="handleLogout()">Đăng xuất</p>
+                </div>
+                <img src="https://ui-avatars.com/api/?name=User&background=4FACFE&color=fff" class="w-10 h-10 rounded-full border-2 border-white shadow">
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-grow">
+            
+            <div class="glass-card p-6 flex flex-col">
+                <h3 class="font-bold text-lg mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-list-check text-accentGreen"></i> Nhiệm vụ hôm nay
+                </h3>
+                
+                <div class="flex gap-2 mb-4">
+                    <input type="text" id="task-input" placeholder="Ví dụ: Giải 5 bài tích phân..." class="flex-grow px-3 py-2 rounded border focus:ring-2 focus:ring-accentBlue outline-none bg-white/70">
+                    <button onclick="addTask()" class="bg-accentBlue text-white px-4 rounded hover:bg-blue-500 transition"><i class="fa-solid fa-plus"></i></button>
+                </div>
+
+                <ul id="task-list" class="space-y-2 flex-grow overflow-y-auto mb-4">
+                    </ul>
+
+                <button onclick="generateMockSchedule()" class="w-full mt-auto py-2 border-2 border-dashed border-gray-300 rounded text-gray-500 hover:border-primaryOrange hover:text-primaryOrange transition font-semibold text-sm">
+                    ✨ AI Lập lịch mẫu (Toán 12)
+                </button>
+            </div>
+
+            <div class="glass-card p-6 flex flex-col items-center justify-center text-center relative overflow-hidden">
+                <h3 class="font-bold text-lg mb-2 absolute top-6">Phiên Tập Trung</h3>
+                
+                <div class="relative w-64 h-64 mt-8 flex items-center justify-center">
+                    <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                        <defs>
+                            <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" stop-color="#FF512F" />
+                                <stop offset="100%" stop-color="#F09819" />
+                            </linearGradient>
+                        </defs>
+                        <circle cx="50" cy="50" r="45" fill="none" stroke="#f0f0f0" stroke-width="6"></circle>
+                        <circle id="pomodoro-circle" cx="50" cy="50" r="45" fill="none" stroke-width="6" stroke-dasharray="283" stroke-dashoffset="0" stroke-linecap="round" class="pomodoro-ring"></circle>
+                    </svg>
+                    <div class="absolute inset-0 flex flex-col items-center justify-center">
+                        <span id="timer-display" class="text-5xl font-extrabold text-gray-800 tracking-wider">25:00</span>
+                        <span id="timer-status" class="text-sm text-gray-500 mt-1 uppercase tracking-widest">Sẵn sàng</span>
+                    </div>
+                </div>
+
+                <div class="flex gap-4 mt-8 z-10">
+                    <button onclick="startTimer()" class="w-14 h-14 rounded-full gradient-bg text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-play"></i>
+                    </button>
+                    <button onclick="pauseTimer()" class="w-14 h-14 rounded-full bg-white text-gray-700 shadow border hover:bg-gray-50 transition flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-pause"></i>
+                    </button>
+                    <button onclick="resetTimer()" class="w-14 h-14 rounded-full bg-gray-100 text-gray-600 shadow hover:bg-gray-200 transition flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-rotate-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="glass-card p-6 flex flex-col">
+                <div class="bg-white/60 rounded-xl p-4 mb-4 border border-gray-100 shadow-sm">
+                    <h3 class="font-bold text-sm text-gray-500 mb-2 uppercase tracking-wide">Phòng Tự Học Chung</h3>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <span class="relative flex h-3 w-3">
+                              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                              <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                            </span>
+                            <span class="font-bold text-xl">1,204</span> <span class="text-sm text-gray-600">bạn đang học</span>
+                        </div>
+                        <button onclick="cheerUp()" class="bg-red-50 text-red-500 hover:bg-red-100 px-3 py-1.5 rounded-full text-sm font-bold transition flex items-center gap-1 border border-red-100">
+                            ❤️ Cổ vũ
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex-grow">
+                    <h3 class="font-bold text-sm text-gray-500 mb-3 uppercase tracking-wide">Q&A Nổi Bật</h3>
+                    <div class="bg-white/80 p-4 rounded-xl shadow-sm border border-gray-100 mb-3 cursor-pointer hover:shadow-md transition">
+                        <h4 class="font-bold text-gray-800 mb-1">Xin mẹo nhớ công thức phương trình mặt phẳng Oxyz?</h4>
+                        <div class="flex gap-2 mt-2">
+                            <span class="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded">Toán 12</span>
+                        </div>
+                        <div class="mt-3 bg-green-50/50 p-3 rounded-lg border border-green-200 border-l-4 border-l-accentGreen">
+                            <div class="flex items-center gap-2 mb-1">
+                                <i class="fa-solid fa-circle-check text-accentGreen"></i>
+                                <span class="text-xs font-bold text-accentGreen uppercase tracking-wider">Đã giải quyết</span>
+                            </div>
+                            <p class="text-sm text-gray-700">"Nhớ câu thần chú: Vectơ pháp tuyến là hệ số của x,y,z..."</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="fixed bottom-6 right-6 z-50 flex flex-col items-end">
+            <div id="ai-chat-window" class="chat-hidden glass-card w-80 mb-4 overflow-hidden border-2 border-accentBlue/30 shadow-2xl flex flex-col" style="height: 400px; display: none;">
+                <div class="bg-gradient-to-r from-[#4FACFE] to-[#00F2FE] p-3 text-white font-bold flex justify-between items-center shadow-md">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-robot text-xl"></i> Gia sư Sunlogic AI
+                    </div>
+                    <button onclick="toggleChat()" class="text-white hover:text-gray-200"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                
+                <div id="chat-messages" class="flex-grow p-4 overflow-y-auto flex flex-col gap-3 text-sm bg-white/50">
+                    <div class="self-start bg-gray-100 text-gray-800 px-4 py-2 rounded-2xl rounded-tl-none max-w-[85%] border shadow-sm">
+                        Chào bạn! Hôm nay chúng ta cần giải quyết bài toán nào? Hãy gõ câu hỏi vào bên dưới nhé.
+                    </div>
+                </div>
+
+                <div class="p-3 border-t bg-white flex gap-2">
+                    <input type="text" id="chat-input" placeholder="Hỏi toán 12..." class="flex-grow px-3 py-2 border rounded-full text-sm focus:outline-none focus:border-accentBlue bg-gray-50" onkeypress="handleChatEnter(event)">
+                    <button onclick="sendChatMessage()" class="bg-accentBlue text-white w-9 h-9 rounded-full hover:bg-blue-500 transition flex items-center justify-center shrink-0">
+                        <i class="fa-solid fa-paper-plane text-sm"></i>
+                    </button>
+                </div>
+            </div>
+
+            <button onclick="toggleChat()" class="w-16 h-16 rounded-full bg-gradient-to-r from-[#4FACFE] to-[#00F2FE] text-white shadow-[0_0_15px_rgba(79,172,254,0.5)] hover:scale-110 transition duration-300 flex items-center justify-center text-2xl border-2 border-white">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+            </button>
+        </div>
     </div>
 
-    <!-- Input -->
-    <div class="flex gap-2 p-2 border-t border-white/30 bg-white/60">
-      <input id="chat-input" type="text" placeholder="Hỏi điều gì đó..." class="input-field" style="padding:0.5rem 0.75rem; font-size:0.82rem;"
-        onkeydown="if(event.key==='Enter')sendChat()" />
-      <button onclick="sendChat()" class="w-9 h-9 rounded-xl grad-primary text-white text-sm flex items-center justify-center flex-shrink-0 hover:opacity-90 transition-opacity">↑</button>
-    </div>
-  </div>
-</div>
+    <audio id="ting-sound" src="https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg" preload="auto"></audio>
 
+    <script>
+        /* =========================================
+           STATE MANAGEMENT & LOCAL STORAGE
+           ========================================= */
+        let state = {
+            isLoggedIn: false,
+            email: '',
+            hearts: 5,
+            streak: 0,
+            totalMinutes: 0,
+            lastActiveDate: ''
+        };
 
-<!-- ═══════════════════════════════════════════════
-     JAVASCRIPT
-═══════════════════════════════════════════════ -->
-<script>
-  // ───────────────────────────────────────────────
-  // State
-  // ───────────────────────────────────────────────
-  let taskIdCounter = 0;
-  let pomoTimer = null;
-  let timeLeft = 1500;
-  let pomoRunning = false;
-  let chatOpen = true;
+        // Khởi tạo
+        function initApp() {
+            const savedState = localStorage.getItem('sunlogic_state');
+            if (savedState) {
+                state = JSON.parse(savedState);
+            }
+            
+            // Xử lý Logic Gamification qua ngày mới
+            const today = new Date().toISOString().split('T')[0];
+            if (state.lastActiveDate && state.lastActiveDate !== today) {
+                // Sang ngày mới. Nếu tổng phút hôm qua = 0 -> Trừ 1 tim
+                // (Lưu ý: Logic mock này tính 'hôm nay' của state cũ là 'hôm qua' so với hiện tại)
+                if (state.totalMinutes === 0) {
+                    state.hearts = Math.max(0, state.hearts - 1);
+                    if (state.hearts === 0) {
+                        state.streak = 0; // Trừng phạt nặng
+                        state.hearts = 5; // Hồi tim sau khi phạt
+                    }
+                }
+                // Reset thời gian học cho ngày mới
+                state.totalMinutes = 0;
+            }
+            state.lastActiveDate = today;
+            saveState();
 
-  // ───────────────────────────────────────────────
-  // Helpers
-  // ───────────────────────────────────────────────
-  function getTodayStr() {
-    return new Date().toISOString().slice(0, 10);
-  }
+            // Hiển thị View tương ứng
+            if (state.isLoggedIn) {
+                showAppView();
+                renderGamification();
+                document.getElementById('user-display-name').textContent = state.email.split('@')[0];
+            } else {
+                showLoginView();
+            }
+        }
 
-  function fmtTime(sec) {
-    const m = String(Math.floor(sec / 60)).padStart(2, '0');
-    const s = String(sec % 60).padStart(2, '0');
-    return `${m}:${s}`;
-  }
+        function saveState() {
+            localStorage.setItem('sunlogic_state', JSON.stringify(state));
+        }
 
-  function saveData(key, value) {
-    localStorage.setItem(key, JSON.stringify(value));
-  }
+        /* =========================================
+           AUTH LOGIC
+           ========================================= */
+        function handleLogin() {
+            const email = document.getElementById('login-email').value;
+            const pass = document.getElementById('login-pass').value;
+            
+            if (email.includes('@') && pass.length > 0) {
+                state.isLoggedIn = true;
+                state.email = email;
+                saveState();
+                
+                document.getElementById('user-display-name').textContent = email.split('@')[0];
+                showAppView();
+                renderGamification();
+            } else {
+                alert("Vui lòng nhập Email hợp lệ và Mật khẩu!");
+            }
+        }
 
-  function loadDataRaw(key, def) {
-    const v = localStorage.getItem(key);
-    if (v === null) return def;
-    try { return JSON.parse(v); } catch(e) { return def; }
-  }
+        function handleLogout() {
+            state.isLoggedIn = false;
+            saveState();
+            showLoginView();
+        }
 
-  // ───────────────────────────────────────────────
-  // Auth
-  // ───────────────────────────────────────────────
-  function login() {
-    const email = document.getElementById('login-email').value.trim();
-    const pass  = document.getElementById('login-pass').value.trim();
-    if (!email && !pass) {
-      // allow demo login with empty fields — just use "Demo User"
-    }
-    const username = email ? email.split('@')[0] : 'Bạn ơi';
-    localStorage.setItem('isLoggedIn', 'true');
-    localStorage.setItem('username', username);
-    document.getElementById('login-view').style.display = 'none';
-    document.getElementById('app-view').style.display = 'block';
-    document.getElementById('chat-widget').style.display = 'block';
-    loadApp(username);
-  }
+        function showLoginView() {
+            document.getElementById('login-view').style.display = 'flex';
+            document.getElementById('app-view').style.display = 'none';
+        }
 
-  // ───────────────────────────────────────────────
-  // App bootstrap
-  // ───────────────────────────────────────────────
-  window.addEventListener('DOMContentLoaded', () => {
-    if (localStorage.getItem('isLoggedIn') === 'true') {
-      document.getElementById('login-view').style.display = 'none';
-      document.getElementById('app-view').style.display = 'block';
-      document.getElementById('chat-widget').style.display = 'block';
-      loadApp(loadDataRaw('username', 'Bạn'));
-    }
-  });
+        function showAppView() {
+            document.getElementById('login-view').style.display = 'none';
+            document.getElementById('app-view').style.display = 'flex';
+        }
 
-  function loadApp(username) {
-    // Avatar
-    const av = document.getElementById('avatar-el');
-    av.textContent = (username[0] || '?').toUpperCase();
-    av.title = username;
+        function renderGamification() {
+            document.getElementById('streak-count').textContent = state.streak;
+            document.getElementById('total-time').textContent = state.totalMinutes;
+            
+            const heartsContainer = document.getElementById('hearts-container');
+            heartsContainer.innerHTML = '';
+            for (let i = 0; i < 5; i++) {
+                if (i < state.hearts) {
+                    heartsContainer.innerHTML += '<span>❤️</span>';
+                } else {
+                    heartsContainer.innerHTML += '<span class="text-gray-300">🤍</span>';
+                }
+            }
+        }
 
-    // Load stats
-    let totalMinutes = loadDataRaw('totalMinutes', 0);
-    let streak       = loadDataRaw('streak', 0);
-    let hearts       = loadDataRaw('hearts', 5);
-    let lastDate     = loadDataRaw('lastDate', '');
-    let sessions     = loadDataRaw('sessions', 0);
-    const today      = getTodayStr();
+        /* =========================================
+           POMODORO TIMER LOGIC
+           ========================================= */
+        const WORK_TIME = 25 * 60; // 25 minutes in seconds
+        let timeLeft = WORK_TIME;
+        let timerInterval = null;
+        let isRunning = false;
 
-    // Streak / heart logic
-    if (lastDate && lastDate !== today) {
-      const todayMinutes = loadDataRaw('todayMinutes', 0);
-      if (todayMinutes === 0) {
-        hearts = Math.max(0, hearts - 1);
-        saveData('hearts', hearts);
-      }
-      if (hearts === 0) { streak = 0; saveData('streak', streak); }
-    }
-    saveData('lastDate', today);
+        const timerDisplay = document.getElementById('timer-display');
+        const timerStatus = document.getElementById('timer-status');
+        const pomodoroCircle = document.getElementById('pomodoro-circle');
+        const circleCircumference = 283; // 2 * pi * r (r=45)
 
-    updateStatsDOM(totalMinutes, streak, hearts, sessions);
-    renderTasks();
-  }
+        function updateTimerUI() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            
+            // Update SVG circle stroke
+            const offset = circleCircumference - (timeLeft / WORK_TIME) * circleCircumference;
+            pomodoroCircle.style.strokeDashoffset = offset;
+        }
 
-  function updateStatsDOM(totalMinutes, streak, hearts, sessions) {
-    document.getElementById('total-time').textContent   = totalMinutes;
-    document.getElementById('streak-count').textContent = streak;
-    document.getElementById('session-count').textContent = sessions;
+        function startTimer() {
+            if (isRunning) return;
+            isRunning = true;
+            timerStatus.textContent = "Đang tập trung...";
+            timerStatus.classList.add('text-primaryOrange', 'font-bold');
+            
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateTimerUI();
+                
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    isRunning = false;
+                    document.getElementById('ting-sound').play();
+                    
+                    // Thưởng logic
+                    state.totalMinutes += 25;
+                    state.streak += 1;
+                    saveState();
+                    renderGamification();
+                    createConfetti();
+                    
+                    timeLeft = WORK_TIME;
+                    timerStatus.textContent = "Hoàn thành! Nghỉ ngơi nhé.";
+                    timerStatus.classList.remove('text-primaryOrange');
+                    timerStatus.classList.add('text-accentGreen');
+                    updateTimerUI();
+                }
+            }, 1000);
+        }
 
-    // Hearts
-    const row = document.getElementById('hearts-row');
-    row.innerHTML = '';
-    for (let i = 0; i < 5; i++) {
-      const span = document.createElement('span');
-      span.textContent = i < hearts ? '❤️' : '🤍';
-      span.style.fontSize = '1rem';
-      row.appendChild(span);
-    }
-  }
+        function pauseTimer() {
+            clearInterval(timerInterval);
+            isRunning = false;
+            timerStatus.textContent = "Đã tạm dừng";
+            timerStatus.classList.remove('text-primaryOrange', 'text-accentGreen');
+        }
 
-  // ───────────────────────────────────────────────
-  // Pomodoro
-  // ───────────────────────────────────────────────
-  function startPomo() {
-    if (pomoRunning) return;
-    pomoRunning = true;
-    document.getElementById('pomo-ring').classList.add('running');
-    document.getElementById('pomo-status').textContent = 'Đang tập trung...';
-    pomoTimer = setInterval(() => {
-      timeLeft--;
-      document.getElementById('pomo-display').textContent = fmtTime(timeLeft);
-      if (timeLeft <= 0) {
-        clearInterval(pomoTimer);
-        pomoRunning = false;
-        document.getElementById('pomo-ring').classList.remove('running');
-        document.getElementById('pomo-status').textContent = '🎉 Hoàn thành!';
-        onPomoComplete();
-      }
-    }, 1000);
-  }
+        function resetTimer() {
+            clearInterval(timerInterval);
+            isRunning = false;
+            timeLeft = WORK_TIME;
+            timerStatus.textContent = "Sẵn sàng";
+            timerStatus.classList.remove('text-primaryOrange', 'text-accentGreen');
+            updateTimerUI();
+        }
 
-  function pausePomo() {
-    clearInterval(pomoTimer);
-    pomoRunning = false;
-    document.getElementById('pomo-ring').classList.remove('running');
-    document.getElementById('pomo-status').textContent = 'Đã tạm dừng';
-  }
+        /* =========================================
+           CHECKLIST LOGIC
+           ========================================= */
+        function addTask(text = null) {
+            const input = document.getElementById('task-input');
+            const taskText = text || input.value.trim();
+            if (!taskText) return;
 
-  function resetPomo() {
-    clearInterval(pomoTimer);
-    pomoRunning = false;
-    timeLeft = 1500;
-    document.getElementById('pomo-display').textContent = '25:00';
-    document.getElementById('pomo-status').textContent = 'Sẵn sàng';
-    document.getElementById('pomo-ring').classList.remove('running');
-  }
+            const list = document.getElementById('task-list');
+            const li = document.createElement('li');
+            li.className = "flex items-center gap-3 bg-white/50 p-2 rounded border border-gray-100 shadow-sm transition-all";
+            
+            li.innerHTML = `
+                <input type="checkbox" class="w-4 h-4 text-accentGreen rounded focus:ring-accentGreen cursor-pointer" onchange="toggleTask(this)">
+                <span class="text-sm flex-grow transition-all">${taskText}</span>
+                <button onclick="this.parentElement.remove()" class="text-gray-400 hover:text-red-500"><i class="fa-solid fa-trash text-xs"></i></button>
+            `;
+            list.appendChild(li);
+            if(!text) input.value = '';
+        }
 
-  function onPomoComplete() {
-    // Sound
-    try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain); gain.connect(ctx.destination);
-      osc.frequency.value = 880;
-      osc.type = 'sine';
-      gain.gain.setValueAtTime(0.4, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
-      osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.8);
-    } catch(e) {}
+        function toggleTask(checkbox) {
+            const textSpan = checkbox.nextElementSibling;
+            if (checkbox.checked) {
+                textSpan.classList.add('line-through', 'text-gray-400', 'opacity-60');
+            } else {
+                textSpan.classList.remove('line-through', 'text-gray-400', 'opacity-60');
+            }
+        }
 
-    // Update stats
-    let totalMinutes = loadDataRaw('totalMinutes', 0) + 25;
-    let todayMinutes = loadDataRaw('todayMinutes', 0) + 25;
-    let streak       = loadDataRaw('streak', 0) + 1;
-    let sessions     = loadDataRaw('sessions', 0) + 1;
-    let hearts       = loadDataRaw('hearts', 5);
+        function generateMockSchedule() {
+            addTask("Giai đoạn 1: Ôn lại công thức Nguyên Hàm cơ bản");
+            addTask("Giai đoạn 2: Luyện 5 đề Tích phân từng phần");
+            addTask("Giai đoạn 3: Kiểm tra lỗi sai & Casio bấm nhanh");
+        }
 
-    saveData('totalMinutes', totalMinutes);
-    saveData('todayMinutes', todayMinutes);
-    saveData('streak', streak);
-    saveData('sessions', sessions);
-    saveData('lastDate', getTodayStr());
+        /* =========================================
+           AI TUTOR LOGIC
+           ========================================= */
+        function toggleChat() {
+            const chatWin = document.getElementById('ai-chat-window');
+            if (chatWin.style.display === 'none') {
+                chatWin.style.display = 'flex';
+                setTimeout(() => chatWin.classList.remove('chat-hidden'), 10);
+            } else {
+                chatWin.classList.add('chat-hidden');
+                setTimeout(() => chatWin.style.display = 'none', 300);
+            }
+        }
 
-    updateStatsDOM(totalMinutes, streak, hearts, sessions);
-  }
+        function handleChatEnter(e) {
+            if (e.key === 'Enter') sendChatMessage();
+        }
 
-  // ───────────────────────────────────────────────
-  // Tasks
-  // ───────────────────────────────────────────────
-  function addTask(text) {
-    const inp = document.getElementById('task-input');
-    const taskText = text || inp.value.trim();
-    if (!taskText) return;
-    inp.value = '';
+        function sendChatMessage() {
+            const input = document.getElementById('chat-input');
+            const text = input.value.trim();
+            if (!text) return;
 
-    const tasks = loadDataRaw('tasks', []);
-    const id = 'task_' + (++taskIdCounter) + '_' + Date.now();
-    tasks.push({ id, text: taskText, done: false });
-    saveData('tasks', tasks);
-    renderTasks();
-  }
+            const chatBox = document.getElementById('chat-messages');
+            
+            // Add User msg
+            chatBox.innerHTML += `
+                <div class="self-end bg-accentBlue text-white px-4 py-2 rounded-2xl rounded-tr-none max-w-[85%] shadow-sm">
+                    ${text}
+                </div>
+            `;
+            input.value = '';
+            chatBox.scrollTop = chatBox.scrollHeight;
 
-  function toggleTask(id) {
-    const tasks = loadDataRaw('tasks', []);
-    const t = tasks.find(t => t.id === id);
-    if (t) { t.done = !t.done; saveData('tasks', tasks); renderTasks(); }
-  }
+            // Mock AI Reply (Socratic Method)
+            setTimeout(() => {
+                chatBox.innerHTML += `
+                    <div class="self-start bg-gray-100 text-gray-800 px-4 py-2 rounded-2xl rounded-tl-none max-w-[85%] border shadow-sm">
+                        Hay quá! Thay vì tính tích phân này bằng công thức dài, bạn đã thử dùng phương pháp <b>Kẻ bảng (Múa cột)</b> chưa? Cột 1 đặt u là đa thức, cột 2 đặt dv là phần còn lại. Nháp thử bước 1 xem sao nhé!
+                    </div>
+                `;
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }, 1500);
+        }
 
-  function renderTasks() {
-    const ul = document.getElementById('task-list');
-    const empty = document.getElementById('task-empty');
-    const tasks = loadDataRaw('tasks', []);
-    ul.innerHTML = '';
-    if (tasks.length === 0) { empty.classList.remove('hidden'); return; }
-    empty.classList.add('hidden');
+        /* =========================================
+           COMMUNITY ANIMATIONS
+           ========================================= */
+        function cheerUp() {
+            const emojis = ['❤️', '🔥', '🌟', '👏'];
+            for(let i=0; i<5; i++) {
+                setTimeout(() => {
+                    const el = document.createElement('div');
+                    el.className = 'flying-emoji';
+                    el.innerText = emojis[Math.floor(Math.random() * emojis.length)];
+                    // Random X path (-1 to 1)
+                    el.style.setProperty('--randX', (Math.random() * 2 - 1).toFixed(2));
+                    document.body.appendChild(el);
+                    
+                    // Remove after animation
+                    setTimeout(() => el.remove(), 2000);
+                }, i * 200);
+            }
+        }
 
-    tasks.forEach(t => {
-      const li = document.createElement('li');
-      li.className = 'task-item';
-      li.innerHTML = `
-        <input type="checkbox" id="${t.id}" ${t.done ? 'checked' : ''} onchange="toggleTask('${t.id}')">
-        <label for="${t.id}" ${t.done ? 'style="text-decoration:line-through;color:#9ca3af"' : ''}>${t.text}</label>
-        <button onclick="deleteTask('${t.id}')" style="margin-left:auto;background:none;border:none;cursor:pointer;color:#d1d5db;font-size:1rem;line-height:1;" title="Xóa">×</button>
-      `;
-      ul.appendChild(li);
-    });
-  }
+        function createConfetti() {
+            cheerUp(); // Re-use emoji flying logic for streak celebration
+        }
 
-  function deleteTask(id) {
-    let tasks = loadDataRaw('tasks', []);
-    tasks = tasks.filter(t => t.id !== id);
-    saveData('tasks', tasks);
-    renderTasks();
-  }
+        // Khởi động
+        window.onload = initApp;
 
-  function addSampleSchedule() {
-    const samples = ['📖 Ngày 1: Lý thuyết', '📝 Ngày 2: Luyện đề Toán', '🔍 Ngày 3: Rà soát lỗi'];
-    samples.forEach(s => addTask(s));
-  }
-
-  // ───────────────────────────────────────────────
-  // Community tabs
-  // ───────────────────────────────────────────────
-  function switchTab(tab) {
-    document.getElementById('panel-room').style.display = tab === 'room' ? 'block' : 'none';
-    document.getElementById('panel-qa').style.display   = tab === 'qa'   ? 'block' : 'none';
-    document.getElementById('tab-room').className = 'tab-btn' + (tab === 'room' ? ' active' : '');
-    document.getElementById('tab-qa').className   = 'tab-btn' + (tab === 'qa'   ? ' active' : '');
-  }
-
-  // ───────────────────────────────────────────────
-  // Cheer flying emojis
-  // ───────────────────────────────────────────────
-  function cheer() {
-    const emojis = ['❤️','🔥','💪','⭐','🎯'];
-    for (let i = 0; i < 8; i++) {
-      setTimeout(() => {
-        const el = document.createElement('div');
-        el.className = 'flying-emoji';
-        el.textContent = emojis[Math.floor(Math.random() * emojis.length)];
-        el.style.left = (Math.random() * 80 + 5) + 'vw';
-        el.style.bottom = '3rem';
-        document.body.appendChild(el);
-        setTimeout(() => el.remove(), 2100);
-      }, i * 120);
-    }
-  }
-
-  // ───────────────────────────────────────────────
-  // AI Chat
-  // ───────────────────────────────────────────────
-  const AI_RESPONSES = [
-    "Chào bạn! Thay vì dùng công thức ∫ u dv dài dòng, bạn đã thử dùng phương pháp Kẻ bảng (Múa cột) cho bài Tích phân này chưa? Cột 1 đặt u là đa thức, cột 2 đặt dv là lượng giác/mũ nhé!",
-    "Để nhớ công thức lượng giác, hãy vẽ đường tròn đơn vị và đánh dấu các giá trị đặc biệt. Não bạn sẽ nhớ hình ảnh lâu hơn con số! 🧠",
-    "Mẹo học từ vựng Anh: Liên kết mỗi từ với một hình ảnh kỳ lạ, buồn cười trong đầu. Phương pháp loci (cung điện ký ức) cực kỳ hiệu quả! 🏰",
-    "Khi làm bài Vật lý, hãy vẽ sơ đồ lực trước khi tính. 80% học sinh sai vì bỏ qua bước này! Chúc bạn tự tin nhé ✨"
-  ];
-  let aiIdx = 0;
-
-  function sendChat() {
-    const inp = document.getElementById('chat-input');
-    const msg = inp.value.trim();
-    if (!msg) return;
-    inp.value = '';
-
-    const body = document.getElementById('chat-body');
-
-    // User bubble
-    const userDiv = document.createElement('div');
-    userDiv.className = 'chat-bubble-user';
-    userDiv.textContent = msg;
-    body.appendChild(userDiv);
-
-    // Typing indicator
-    const typing = document.createElement('div');
-    typing.className = 'chat-bubble-ai typing-dots';
-    typing.innerHTML = '<span></span><span></span><span></span>';
-    body.appendChild(typing);
-    body.scrollTop = body.scrollHeight;
-
-    setTimeout(() => {
-      typing.remove();
-      const aiDiv = document.createElement('div');
-      aiDiv.className = 'chat-bubble-ai';
-      aiDiv.textContent = AI_RESPONSES[aiIdx % AI_RESPONSES.length];
-      aiIdx++;
-      body.appendChild(aiDiv);
-      body.scrollTop = body.scrollHeight;
-    }, 1000);
-  }
-
-  function toggleChat() {
-    const body  = document.getElementById('chat-body');
-    const inp   = document.getElementById('chat-widget').querySelector('.flex.gap-2');
-    chatOpen = !chatOpen;
-    body.style.display = chatOpen ? 'flex' : 'none';
-    inp.style.display  = chatOpen ? 'flex' : 'none';
-  }
-</script>
+    </script>
 </body>
 </html>
