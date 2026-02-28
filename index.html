@@ -1,532 +1,498 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-
-// ─── UTILS & LOCAL STORAGE ───────────────────────────────────────────────────
-const LS = {
-  get: (k, def) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : def; } catch { return def; } },
-  set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
-};
-
-const today = () => new Date().toISOString().split("T")[0];
-
-// ─── MOCK DATA KHÁC ───────────────────────────────────────────────────────────
-const QUIZ_DATA = [
-  {
-    id: 1, subject: "Toán 12 - Tích phân",
-    questions: [
-      { q: "Tính ∫(2x + 3)dx = ?", options: ["x² + 3x + C", "x² + 3x", "2x² + 3x + C", "x + 3 + C"], answer: 0 },
-      { q: "∫sin(x)dx = ?", options: ["-cos(x) + C", "cos(x) + C", "sin(x) + C", "-sin(x) + C"], answer: 0 },
-      { q: "∫e^x dx = ?", options: ["e^x + C", "xe^x + C", "e^(x+1) + C", "ln(x) + C"], answer: 0 },
-    ]
-  },
-  {
-    id: 2, subject: "Toán 12 - Giới hạn",
-    questions: [
-      { q: "lim(x→0) sin(x)/x = ?", options: ["0", "1", "∞", "Không tồn tại"], answer: 1 },
-      { q: "lim(x→∞) 1/x = ?", options: ["1", "∞", "0", "-1"], answer: 2 },
-      { q: "lim(x→0) (e^x - 1)/x = ?", options: ["0", "1", "e", "∞"], answer: 1 },
-    ]
-  }
-];
-
-const LIBRARY = [
-  { id: 1, class: "Lớp 12", subject: "Toán", chapter: "Nguyên hàm - Tích phân", files: ["Bảng công thức tích phân.pdf", "Bài tập có lời giải.pdf"] },
-  { id: 2, class: "Lớp 12", subject: "Toán", chapter: "Giới hạn - Liên tục", files: ["Lý thuyết giới hạn.pdf"] },
-  { id: 3, class: "Lớp 12", subject: "Vật Lý", chapter: "Dao động điều hòa", files: ["Công thức dao động.pdf", "Đề thi thử.pdf"] },
-  { id: 4, class: "Lớp 11", subject: "Toán", chapter: "Tổ hợp - Xác suất", files: ["Bảng tổ hợp.pdf"] },
-  { id: 5, class: "Lớp 11", subject: "Hóa", chapter: "Hidrocacbon", files: ["Sơ đồ phản ứng.pdf"] },
-];
-
-const BADGES_DEF = [
-  { id: "first_login", icon: "⭐", name: "Chào mừng!", desc: "Tham gia Sunlogic", req: 0 },
-  { id: "streak7", icon: "🔥", name: "Khởi đầu mạnh mẽ", desc: "7 ngày liên tiếp", req: 7 },
-  { id: "streak30", icon: "🏆", name: "Bất khả chiến bại", desc: "30 ngày liên tiếp", req: 30 },
-  { id: "quiz_first", icon: "📝", name: "Làm bài đầu tiên", desc: "Hoàn thành 1 bài test", req: 1 },
-  { id: "pomodoro5", icon: "🍅", name: "Tập trung cao độ", desc: "5 phiên Pomodoro", req: 5 },
-  { id: "master_math", icon: "🧮", name: "Master Toán 12", desc: "Đạt 10 điểm Toán", req: 10 },
-];
-
-const LEADERBOARD = [
-  { rank: 1, name: "Minh Hoàng", streak: 28, sessions: 42, avatar: "MH" },
-  { rank: 2, name: "Lan Anh", streak: 21, sessions: 38, avatar: "LA" },
-  { rank: 3, name: "Đức Thịnh", streak: 19, sessions: 31, avatar: "ĐT" },
-  { rank: 4, name: "Phương Linh", streak: 15, sessions: 27, avatar: "PL" },
-  { rank: 5, name: "Bạn", streak: 0, sessions: 0, avatar: "BN", isUser: true },
-];
-
-// ─── DỮ LIỆU TRI THỨC AI (KNOWLEDGE BASE) ────────────────────────────────────
-const AI_KNOWLEDGE = [
-  { keywords: ["dien tich", "hinh tron"], answer: "📐 **Toán học:** Diện tích hình tròn được tính bằng công thức: **S = π × R²** (Pi nhân với bình phương bán kính)." },
-  { keywords: ["pytago", "pitago", "tam giac vuong"], answer: "📐 **Toán học:** Định lý Pytago trong tam giác vuông: Bình phương cạnh huyền bằng tổng bình phương hai cạnh góc vuông (**c² = a² + b²**)." },
-  { keywords: ["dao ham", "x m"], answer: "📐 **Toán học:** Đạo hàm cơ bản: Đạo hàm của $x^n$ là **$n × x^{n-1}$**. Bạn đang học Toán 11 hay 12 vậy?" },
-  { keywords: ["tich phan", "tung phan"], answer: "📐 **Toán 12:** Với bài tích phân từng phần, thay vì dùng công thức $\\int u\\,dv$ dài dòng, bạn đã thử dùng phương pháp 'Múa cột' (Kẻ bảng) chưa? Cột 1 bạn đặt $u$ là đa thức, cột 2 đặt $dv$ là lượng giác/mũ nhé." },
-  { keywords: ["vo nhat", "kim lan", "nhan vat trang"], answer: "📚 **Ngữ Văn:** Truyện ngắn 'Vợ nhặt' tái hiện nạn đói năm 1945. Tác phẩm làm nổi bật khát vọng sống và tình người của nhân vật Tràng, Thị và bà cụ Tứ." },
-  { keywords: ["hien tai don", "hien tai tiep dien"], answer: "🌍 **Tiếng Anh:** Thì hiện tại đơn diễn tả một thói quen hoặc chân lý (S + V/Vs/es). Ví dụ: *The sun rises in the East*." },
-  { keywords: ["dien bien phu", "1954"], answer: "📜 **Lịch Sử:** Chiến dịch Điện Biên Phủ kết thúc thắng lợi vào ngày **7/5/1954**, chấm dứt sự đô hộ của thực dân Pháp tại VN." },
-  { keywords: ["khi hau", "viet nam"], answer: "🗺️ **Địa Lý:** Việt Nam nằm trong vùng khí hậu nhiệt đới gió mùa. Miền Bắc có 4 mùa, miền Nam chủ yếu có 2 mùa mưa/khô." },
-  { keywords: ["dinh luat om", "dien tro"], answer: "⚡ **Vật Lý:** Định luật Ôm: Cường độ dòng điện tỉ lệ thuận với HĐT và tỉ lệ nghịch với điện trở. Công thức: **I = U / R**." },
-  { keywords: ["axit", "bazo", "quy tim"], answer: "🧪 **Hóa Học:** Axit làm quỳ tím hóa đỏ (pH < 7). Bazơ (Kiềm) làm quỳ tím hóa xanh (pH > 7)." },
-  { keywords: ["chao", "hi", "hello", "alo"], answer: "👋 Chào bạn! Mình ở đây để giúp bạn học tập. Bạn cần hỏi công thức hay lý thuyết môn nào?" },
-];
-const AI_DEFAULT = "Câu hỏi thú vị! 🌟 Thay vì mình giải thẳng, mình muốn bạn tự khám phá. Hãy cho mình biết: bạn đã thử hướng tiếp cận nào chưa? Có điều gì trong bài khiến bạn băn khoăn nhất không?";
-
-// ─── DỮ LIỆU CỘNG ĐỒNG MẶC ĐỊNH ──────────────────────────────────────────────
-const DEFAULT_POSTS = [
-  {
-      id: 1700000000000,
-      user: "Hải Nam",
-      avatar: "HN",
-      time: "2 giờ trước",
-      title: "Xin mẹo nhớ các dạng phương trình mặt phẳng Oxyz?",
-      content: "Sắp thi rồi mà mình hay nhầm các dạng viết phương trình mặt phẳng đi qua 3 điểm quá. Ai có mẹo gì dễ nhớ không ạ?",
-      tag: "Toán học",
-      votes: 24,
-      isSolved: true,
-      comments: [
-          { id: 1, author: "Gia sư Sunlogic", content: "Để viết PT mặt phẳng cần 1 điểm đi qua và 1 Vectơ pháp tuyến. Nếu qua 3 điểm A, B, C thì Vectơ pháp tuyến chính là tích có hướng của [AB, AC] nhé!", isCorrect: true },
-          { id: 2, author: "Minh Anh", content: "Cảm ơn gia sư, mình cũng đang mắc phần này.", isCorrect: false }
-      ]
-  }
-];
-
-// ─── ICONS ────────────────────────────────────────────────────────────────────
-const SunlogicLogo = () => (
-  <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
-    <defs>
-      <radialGradient id="sunGrad" cx="50%" cy="50%" r="50%">
-        <stop offset="0%" stopColor="#FFD60A" />
-        <stop offset="100%" stopColor="#FF6B2B" />
-      </radialGradient>
-    </defs>
-    <circle cx="18" cy="18" r="8" fill="url(#sunGrad)" />
-    {[0,45,90,135,180,225,270,315].map((deg, i) => (
-      <line key={i} x1={18 + 10 * Math.cos(deg * Math.PI/180)} y1={18 + 10 * Math.sin(deg * Math.PI/180)}
-        x2={18 + 16 * Math.cos(deg * Math.PI/180)} y2={18 + 16 * Math.sin(deg * Math.PI/180)}
-        stroke="url(#sunGrad)" strokeWidth={i%2===0?"2.5":"1.5"} strokeLinecap="round" />
-    ))}
-    <circle cx="18" cy="18" r="5" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="1" strokeDasharray="2 2" />
-    <circle cx="18" cy="18" r="3" fill="#fff" fillOpacity="0.3" />
-  </svg>
-);
-
-// ─── MAIN APP COMPONENT ───────────────────────────────────────────────────────
-export default function App() {
-  const [auth, setAuth] = useState(() => LS.get("sl_auth", null));
-  const [profile, setProfile] = useState(() => LS.get("sl_profile", null));
-
-  const login = (userData) => {
-    const existingProfile = LS.get("sl_profile", null);
-    const p = existingProfile || {
-      name: userData.name || userData.email.split("@")[0],
-      email: userData.email,
-      avatar: (userData.name || userData.email)[0].toUpperCase(),
-      streak: 0, maxStreak: 0, lastLogin: null, streakFreeze: 1,
-      pomodoroCount: 0, quizScores: [], earnedBadges: ["first_login"],
-      activityMap: {}, notes: "", tasks: [],
-    };
-    if (p.lastLogin !== today()) {
-      p.streak += 1;
-      p.maxStreak = Math.max(p.maxStreak, p.streak);
-      p.lastLogin = today();
-      p.activityMap[today()] = (p.activityMap[today()] || 0) + 1;
-      if (p.streak >= 7 && !p.earnedBadges.includes("streak7")) p.earnedBadges.push("streak7");
-      if (p.streak >= 30 && !p.earnedBadges.includes("streak30")) p.earnedBadges.push("streak30");
-    }
-    LS.set("sl_profile", p);
-    LS.set("sl_auth", { email: userData.email });
-    setAuth({ email: userData.email });
-    setProfile(p);
-  };
-
-  const logout = () => { LS.set("sl_auth", null); setAuth(null); };
-
-  const updateProfile = useCallback((updater) => {
-    setProfile(prev => {
-      const next = typeof updater === "function" ? updater(prev) : { ...prev, ...updater };
-      LS.set("sl_profile", next);
-      return next;
-    });
-  }, []);
-
-  if (!auth || !profile) return <GatekeeperScreen onLogin={login} />;
-  return <MainApp profile={profile} updateProfile={updateProfile} onLogout={logout} />;
-}
-
-// ─── GATEKEEPER (MÀN HÌNH ĐĂNG NHẬP) ──────────────────────────────────────────
-function GatekeeperScreen({ onLogin }) {
-  const [mode, setMode] = useState("login");
-  const [form, setForm] = useState({ name: "", email: "", password: "" });
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const inspirations = [
-    { quote: "Hành trình ngàn dặm bắt đầu từ một bước chân.", author: "Lão Tử" },
-    { quote: "Thành công không phải là chìa khóa của hạnh phúc. Hạnh phúc là chìa khóa của thành công.", author: "Albert Schweitzer" },
-  ];
-  const qIdx = 0;
-
-  const handleSubmit = () => {
-    if (!form.email || !form.password) { setError("Vui lòng điền đầy đủ thông tin!"); return; }
-    if (form.password.length < 6) { setError("Mật khẩu tối thiểu 6 ký tự!"); return; }
-    setLoading(true);
-    setTimeout(() => { onLogin(form); setLoading(false); }, 800);
-  };
-
-  return (
-    <div style={{ fontFamily: "'Sora', sans-serif", background: "#0a0a12", minHeight: "100vh", display: "flex" }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap');
-        .btn-glow { transition: all 0.3s; }
-        .btn-glow:hover { box-shadow: 0 0 30px rgba(255,107,43,0.5); transform: translateY(-1px); }
-        .input-field { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; border-radius: 12px; padding: 12px 16px; width: 100%; font-family: 'Sora', sans-serif; font-size: 14px; transition: all 0.3s; outline: none; box-sizing: border-box;}
-        .input-field:focus { border-color: rgba(255,107,43,0.6); }
-      `}</style>
-      
-      {/* Left Panel */}
-      <div style={{ flex: 1, background: "linear-gradient(135deg, #0f0f1a 0%, #1a0a05 50%, #0f1a0a 100%)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px" }}>
-        <h1 style={{ fontSize: 42, fontWeight: 800, color: "#fff", margin: "0 0 8px" }}>
-          <span style={{ color: "#FF6B2B" }}>Sun</span>logic
-        </h1>
-        <div style={{ background: "rgba(255,255,255,0.04)", borderRadius: 20, padding: "32px", maxWidth: 400, textAlign: "center", border: "1px solid rgba(255,255,255,0.08)" }}>
-          <p style={{ color: "rgba(255,255,255,0.8)", fontSize: 16, fontStyle: "italic", marginBottom: 16 }}>"{inspirations[qIdx].quote}"</p>
-          <p style={{ color: "rgba(255,107,43,0.8)", fontSize: 13 }}>— {inspirations[qIdx].author}</p>
-        </div>
-      </div>
-
-      {/* Right Panel */}
-      <div style={{ width: 480, background: "#0d0d18", display: "flex", alignItems: "center", justifyContent: "center", padding: 40 }}>
-        <div style={{ width: "100%", maxWidth: 380 }}>
-          <h2 style={{ color: "#fff", fontSize: 28, fontWeight: 700, marginBottom: 32 }}>{mode === "login" ? "Chào mừng trở lại 👋" : "Tạo tài khoản 🚀"}</h2>
-          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            {mode === "register" && <input className="input-field" placeholder="Họ và tên" value={form.name} onChange={e => setForm(f => ({...f, name: e.target.value}))} />}
-            <input className="input-field" type="email" placeholder="Email" value={form.email} onChange={e => setForm(f => ({...f, email: e.target.value}))} />
-            <input className="input-field" type="password" placeholder="Mật khẩu" value={form.password} onChange={e => setForm(f => ({...f, password: e.target.value}))} />
-          </div>
-          {error && <p style={{ color: "#ff5555", fontSize: 13, marginTop: 12 }}>⚠ {error}</p>}
-          <button className="btn-glow" onClick={handleSubmit} disabled={loading} style={{ marginTop: 24, width: "100%", padding: "14px", background: "linear-gradient(135deg, #FF6B2B, #FFD60A)", border: "none", borderRadius: 12, color: "#fff", fontWeight: 700, cursor: "pointer" }}>
-            {loading ? "⏳ Đang xử lý..." : mode === "login" ? "🚀 Đăng Nhập" : "✨ Tạo Tài Khoản"}
-          </button>
-          
-          <button onClick={() => onLogin({ email: "demo@sunlogic.vn", name: "Demo User" })} style={{ marginTop: 16, width: "100%", padding: "12px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 12, color: "#fff", cursor: "pointer" }}>
-            🎮 Dùng thử Demo
-          </button>
-          
-          <p style={{ textAlign: "center", marginTop: 24, color: "rgba(255,255,255,0.4)", fontSize: 13 }}>
-            {mode === "login" ? "Chưa có tài khoản? " : "Đã có tài khoản? "}
-            <span onClick={() => { setMode(m => m==="login"?"register":"login"); setError(""); }} style={{ color: "#FF6B2B", cursor: "pointer", fontWeight: 600 }}>{mode === "login" ? "Đăng ký" : "Đăng nhập"}</span>
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── MAIN APP LAYOUT ──────────────────────────────────────────────────────────
-function MainApp({ profile, updateProfile, onLogout }) {
-  const [tab, setTab] = useState("dashboard");
-
-  const tabs = [
-    { id: "dashboard", icon: "🏠", label: "Dashboard" },
-    { id: "study", icon: "📚", label: "Học tập & Kiểm tra" },
-    { id: "tools", icon: "🛠", label: "Công cụ thông minh" },
-    { id: "ai", icon: "🤖", label: "Trợ lý AI" },
-    { id: "community", icon: "👥", label: "Cộng đồng" },
-  ];
-
-  return (
-    <div style={{ fontFamily: "'Sora', sans-serif", background: "#0a0a12", minHeight: "100vh", display: "flex", color: "#fff" }}>
-      <style>{`
-        .glass-card { background: rgba(255,255,255,0.04); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; }
-        .nav-item { transition: all 0.2s; cursor: pointer; border-radius: 12px; padding: 12px; display: flex; align-items: center; gap: 10px; color: rgba(255,255,255,0.5); font-weight: 500; font-size: 14px;}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sunlogic - Nền Tảng Học Tập</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Sora', sans-serif; background-color: #0a0a12; color: #ffffff; overflow-x: hidden; }
+        
+        /* Glassmorphism & Utilities */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.04);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 20px;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #FF6B2B, #FFD60A);
+            border: none; border-radius: 12px; color: #fff; font-weight: 700;
+            transition: all 0.3s; cursor: pointer;
+        }
+        .btn-primary:hover { opacity: 0.9; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(255,107,43,0.3); }
+        .input-box {
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+            color: #fff; border-radius: 12px; padding: 12px 16px; outline: none; width: 100%; transition: all 0.3s;
+        }
+        .input-box:focus { border-color: #FF6B2B; background: rgba(255,255,255,0.08); }
+        .text-gradient { background: linear-gradient(135deg, #FF6B2B, #FFD60A); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        
+        /* Navigation */
+        .nav-item { padding: 12px 16px; border-radius: 12px; cursor: pointer; color: rgba(255,255,255,0.5); font-weight: 600; transition: all 0.2s; display: flex; align-items: center; gap: 12px; margin-bottom: 8px;}
         .nav-item:hover { background: rgba(255,255,255,0.06); color: #fff; }
         .nav-item.active { background: linear-gradient(135deg, rgba(255,107,43,0.2), rgba(255,214,10,0.1)); color: #FFD60A; border: 1px solid rgba(255,107,43,0.3); }
-        .btn-primary { background: linear-gradient(135deg, #FF6B2B, #FFD60A); border: none; border-radius: 10px; color: #fff; cursor: pointer; font-weight: 600; padding: 10px 20px;}
-        .input-box { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; border-radius: 8px; padding: 10px; outline: none; width: 100%; box-sizing: border-box;}
-      `}</style>
 
-      {/* Sidebar */}
-      <div style={{ width: 250, background: "#0d0d18", borderRight: "1px solid rgba(255,255,255,0.06)", padding: "24px", display: "flex", flexDirection: "column" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 32 }}>
-          <SunlogicLogo />
-          <span style={{ fontWeight: 800, fontSize: 20 }}><span style={{ color: "#FF6B2B"}}>Sun</span>logic</span>
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+
+        /* Animations */
+        .fade-in { animation: fadeIn 0.4s ease forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .chat-typing span { display: inline-block; width: 6px; height: 6px; background: #FF6B2B; border-radius: 50%; margin: 0 2px; animation: bounce 1.4s infinite ease-in-out both; }
+        .chat-typing span:nth-child(1) { animation-delay: -0.32s; }
+        .chat-typing span:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+    </style>
+</head>
+<body class="flex h-screen">
+
+    <div id="login-screen" class="w-full h-full flex z-50 fixed inset-0 bg-[#0a0a12]">
+        <div class="hidden md:flex flex-1 flex-col justify-center p-12 relative overflow-hidden" style="background: linear-gradient(135deg, #0f0f1a, #1a0a05);">
+            <div class="absolute w-96 h-96 bg-orange-500 rounded-full blur-[120px] opacity-20 -top-20 -left-20"></div>
+            <h1 class="text-5xl font-extrabold mb-4 z-10"><span class="text-gradient">Sun</span>logic</h1>
+            <p class="text-xl text-gray-400 z-10 italic">"Học tập giống như leo núi. Khi được soi đường bởi logic, việc học sẽ trở về với bản chất nguyên thủy: Sự khai sáng."</p>
         </div>
-        <nav style={{ display: "flex", flexDirection: "column", gap: 8, flex: 1 }}>
-          {tabs.map(t => (
-            <div key={t.id} className={`nav-item ${tab === t.id ? "active" : ""}`} onClick={() => setTab(t.id)}>
-              <span>{t.icon}</span> <span>{t.label}</span>
+        <div class="w-full md:w-[500px] flex items-center justify-center p-8 bg-[#0d0d18]">
+            <div class="w-full max-w-sm">
+                <h2 class="text-3xl font-bold mb-2">Chào mừng trở lại 👋</h2>
+                <p class="text-gray-500 mb-8 text-sm">Đăng nhập để tiếp tục chuỗi ngày học tập</p>
+                
+                <input type="text" id="login-name" placeholder="Họ và tên của bạn" class="input-box mb-4">
+                <input type="email" id="login-email" placeholder="Email" class="input-box mb-4">
+                <input type="password" id="login-pass" placeholder="Mật khẩu" class="input-box mb-6">
+                
+                <button onclick="handleLogin()" class="btn-primary w-full py-4 text-lg">🚀 Vào không gian học tập</button>
             </div>
-          ))}
-        </nav>
-        <button onClick={onLogout} style={{ padding: "10px", background: "rgba(255,50,50,0.1)", border: "1px solid rgba(255,50,50,0.2)", borderRadius: 10, color: "rgba(255,100,100,0.8)", cursor: "pointer" }}>🚪 Đăng xuất</button>
-      </div>
-
-      {/* Content Area */}
-      <div style={{ flex: 1, padding: "32px", overflowY: "auto", maxHeight: "100vh" }}>
-        {tab === "dashboard" && <DashboardTab profile={profile} updateProfile={updateProfile} />}
-        {tab === "study" && <StudyTab profile={profile} updateProfile={updateProfile} />}
-        {tab === "tools" && <ToolsTab profile={profile} updateProfile={updateProfile} />}
-        {tab === "ai" && <AiTab profile={profile} />}
-        {tab === "community" && <CommunityTab profile={profile} />}
-      </div>
+        </div>
     </div>
-  );
-}
 
-// ─── TAB: DASHBOARD ───────────────────────────────────────────────────────────
-function DashboardTab({ profile, updateProfile }) {
-  const streakPct = Math.min((profile.streak / 30) * 100, 100);
-  return (
-    <div>
-      <h1 style={{ fontSize: 28, fontWeight: 800, marginBottom: 24 }}>Chào {profile.name}! 👋</h1>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 24 }}>
-        <div className="glass-card" style={{ padding: 20, textAlign: "center" }}>
-          <div style={{ fontSize: 32 }}>🔥</div><div style={{ fontSize: 28, fontWeight: 800, color: "#FF6B2B" }}>{profile.streak}</div><div style={{ fontSize: 13, opacity: 0.6 }}>Ngày Streak</div>
-        </div>
-        <div className="glass-card" style={{ padding: 20, textAlign: "center" }}>
-          <div style={{ fontSize: 32 }}>🍅</div><div style={{ fontSize: 28, fontWeight: 800, color: "#FF4088" }}>{profile.pomodoroCount}</div><div style={{ fontSize: 13, opacity: 0.6 }}>Phiên Pomodoro</div>
-        </div>
-        <div className="glass-card" style={{ padding: 20, textAlign: "center" }}>
-          <div style={{ fontSize: 32 }}>🏅</div><div style={{ fontSize: 28, fontWeight: 800, color: "#FFD60A" }}>{profile.earnedBadges.length}</div><div style={{ fontSize: 13, opacity: 0.6 }}>Huy hiệu</div>
-        </div>
-      </div>
-      
-      <div className="glass-card" style={{ padding: 24, marginBottom: 24 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
-          <h3>🔥 Tiến độ 30 ngày</h3>
-          <span style={{ color: "#FF6B2B", fontWeight: "bold" }}>{profile.streak}/30</span>
-        </div>
-        <div style={{ background: "rgba(255,255,255,0.1)", height: 12, borderRadius: 6, overflow: "hidden" }}>
-          <div style={{ height: "100%", width: `${streakPct}%`, background: "linear-gradient(90deg, #FF6B2B, #FFD60A)", transition: "width 0.5s" }} />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── TAB: HỌC TẬP (Mô phỏng nhẹ) ──────────────────────────────────────────────
-function StudyTab() {
-  return (
-    <div>
-      <h1 style={{ fontSize: 28, fontWeight: 800, marginBottom: 24 }}>📚 Thư viện tài liệu</h1>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-        {LIBRARY.map((item, i) => (
-          <div key={i} className="glass-card" style={{ padding: 20 }}>
-            <div style={{ color: "#FFD60A", fontSize: 12, fontWeight: "bold", marginBottom: 8 }}>{item.class} • {item.subject}</div>
-            <h3 style={{ margin: "0 0 12px 0", fontSize: 16 }}>{item.chapter}</h3>
-            {item.files.map((f, j) => (
-              <div key={j} style={{ padding: "6px 12px", background: "rgba(255,255,255,0.05)", borderRadius: 6, marginBottom: 4, fontSize: 13, display: "flex", justifyContent: "space-between" }}>
-                <span>📄 {f}</span>
-                <span style={{ color: "#00C2FF", cursor: "pointer" }}>Tải về</span>
-              </div>
-            ))}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ─── TAB: CÔNG CỤ (Pomodoro) ──────────────────────────────────────────────────
-function ToolsTab({ profile, updateProfile }) {
-  const [pomTime, setPomTime] = useState(25 * 60);
-  const [isRunning, setIsRunning] = useState(false);
-  const timerRef = useRef(null);
-
-  useEffect(() => {
-    if (!isRunning) return;
-    if (pomTime <= 0) {
-      setIsRunning(false);
-      updateProfile(p => ({ ...p, pomodoroCount: p.pomodoroCount + 1, streak: p.streak + 1 }));
-      alert("Hết giờ! Bạn đã hoàn thành 1 Pomodoro.");
-      setPomTime(5 * 60); // Break time
-      return;
-    }
-    timerRef.current = setTimeout(() => setPomTime(t => t - 1), 1000);
-    return () => clearTimeout(timerRef.current);
-  }, [isRunning, pomTime]);
-
-  const mm = Math.floor(pomTime / 60), ss = pomTime % 60;
-
-  return (
-    <div style={{ textAlign: "center", paddingTop: 40 }}>
-      <h1 style={{ fontSize: 28, fontWeight: 800, marginBottom: 40 }}>🍅 Đồng hồ Pomodoro</h1>
-      <div className="glass-card" style={{ display: "inline-block", padding: 60, borderRadius: "50%", border: `4px solid ${isRunning ? "#FF6B2B" : "#444"}` }}>
-        <div style={{ fontSize: 64, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>
-          {String(mm).padStart(2,"0")}:{String(ss).padStart(2,"0")}
-        </div>
-      </div>
-      <div style={{ marginTop: 40, display: "flex", gap: 16, justifyContent: "center" }}>
-        <button className="btn-primary" onClick={() => setIsRunning(!isRunning)}>{isRunning ? "⏸ Tạm dừng" : "▶ Bắt đầu"}</button>
-        <button className="btn-primary" style={{ background: "rgba(255,255,255,0.1)" }} onClick={() => { setIsRunning(false); setPomTime(25*60); }}>🔄 Reset</button>
-      </div>
-    </div>
-  );
-}
-
-// ─── TAB: TRỢ LÝ AI (TÍCH HỢP TỪ KHÓA) ────────────────────────────────────────
-function AiTab({ profile }) {
-  const [messages, setMessages] = useState([
-    { role: "ai", text: `Chào ${profile.name}! 👋 Mình là Trợ giảng AI Sunlogic. Mình có thể giúp bạn lý thuyết Toán, Lý, Hóa, Văn, Anh, Sử, Địa. Bạn muốn hỏi gì?` }
-  ]);
-  const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
-  const chatRef = useRef(null);
-
-  const removeAccents = (str) => {
-    return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-  };
-
-  const findAnswer = (question) => {
-    const cleanQuestion = removeAccents(question);
-    for (let item of AI_KNOWLEDGE) {
-      for (let keyword of item.keywords) {
-        if (cleanQuestion.includes(removeAccents(keyword))) {
-          return item.answer;
-        }
-      }
-    }
-    return AI_DEFAULT;
-  };
-
-  const send = () => {
-    if (!input.trim()) return;
-    const userMsg = input.trim();
-    setInput("");
-    setMessages(m => [...m, { role: "user", text: userMsg }]);
-    setLoading(true);
-
-    setTimeout(() => {
-      const response = findAnswer(userMsg);
-      setMessages(m => [...m, { role: "ai", text: response }]);
-      setLoading(false);
-      setTimeout(() => chatRef.current?.scrollTo(0, chatRef.current.scrollHeight), 100);
-    }, 1000);
-  };
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 100px)" }}>
-      <h1 style={{ fontSize: 26, fontWeight: 800, marginBottom: 16 }}>🤖 Trợ lý AI Sunlogic</h1>
-      
-      <div className="glass-card" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-        {/* Chat Area */}
-        <div ref={chatRef} style={{ flex: 1, padding: 24, overflowY: "auto", display: "flex", flexDirection: "column", gap: 16 }}>
-          {messages.map((m, i) => (
-            <div key={i} style={{ display: "flex", gap: 12, flexDirection: m.role === "user" ? "row-reverse" : "row" }}>
-              <div style={{ width: 36, height: 36, borderRadius: "50%", background: m.role === "ai" ? "linear-gradient(135deg, #FF6B2B, #FFD60A)" : "rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>
-                {m.role === "ai" ? "🤖" : profile.avatar}
-              </div>
-              <div style={{ maxWidth: "70%", padding: "12px 16px", background: m.role === "ai" ? "rgba(255,107,43,0.1)" : "rgba(255,255,255,0.05)", borderRadius: 12 }}>
-                <div style={{ fontSize: 14, lineHeight: 1.5 }}>{m.text}</div>
-              </div>
+    <div id="main-app" class="w-full h-full flex hidden">
+        
+        <aside class="w-64 bg-[#0d0d18] border-r border-white/10 p-6 flex flex-col h-full shrink-0">
+            <div class="flex items-center gap-3 mb-10">
+                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-orange-500 to-yellow-500 flex items-center justify-center shadow-[0_0_15px_rgba(255,107,43,0.4)]">
+                    <i class="fa-regular fa-lightbulb text-white"></i>
+                </div>
+                <span class="font-extrabold text-xl tracking-tight"><span class="text-gradient">Sun</span>logic</span>
             </div>
-          ))}
-          {loading && <div style={{ opacity: 0.5, fontSize: 13, padding: "0 48px" }}>SunBot đang gõ...</div>}
-        </div>
 
-        {/* Input Area */}
-        <div style={{ padding: 16, borderTop: "1px solid rgba(255,255,255,0.1)", display: "flex", gap: 10 }}>
-          <input className="input-box" value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key==="Enter" && send()} placeholder="Ví dụ: Công thức tính diện tích hình tròn?" />
-          <button className="btn-primary" onClick={send}>Gửi ↗</button>
-        </div>
-      </div>
+            <div class="glass-card p-4 mb-6 text-center">
+                <div id="user-avatar" class="w-12 h-12 rounded-full bg-gradient-to-br from-orange-500 to-yellow-500 mx-auto flex items-center justify-center text-xl font-bold mb-2">A</div>
+                <div id="user-name" class="font-bold text-sm">Học sinh</div>
+                <div class="mt-2 text-sm flex items-center justify-center gap-1">
+                    🔥 <span id="sidebar-streak" class="text-orange-500 font-bold">0</span> ngày
+                </div>
+            </div>
+
+            <nav class="flex-1 flex flex-col gap-2">
+                <div class="nav-item active" onclick="switchTab('dashboard', this)"><i class="fa-solid fa-house w-5"></i> Dashboard</div>
+                <div class="nav-item" onclick="switchTab('tools', this)"><i class="fa-solid fa-stopwatch w-5"></i> Công cụ (Pomodoro)</div>
+                <div class="nav-item" onclick="switchTab('ai', this)"><i class="fa-solid fa-robot w-5"></i> Trợ lý AI Tutor</div>
+                <div class="nav-item" onclick="switchTab('community', this)"><i class="fa-solid fa-users w-5"></i> Diễn đàn Hỏi-Đáp</div>
+            </nav>
+
+            <button onclick="handleLogout()" class="mt-auto p-3 rounded-xl bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition font-semibold text-sm">🚪 Đăng xuất</button>
+        </aside>
+
+        <main class="flex-1 overflow-y-auto p-8 relative">
+
+            <div id="tab-dashboard" class="tab-content fade-in">
+                <h1 class="text-3xl font-bold mb-6">Tổng quan học tập 🌟</h1>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div class="glass-card p-6 flex items-center justify-between">
+                        <div>
+                            <div class="text-gray-400 text-sm font-semibold mb-1">Chuỗi ngày (Streak)</div>
+                            <div class="text-3xl font-bold text-orange-500 flex items-center gap-2"><span id="dash-streak">0</span> 🔥</div>
+                        </div>
+                    </div>
+                    <div class="glass-card p-6 flex items-center justify-between">
+                        <div>
+                            <div class="text-gray-400 text-sm font-semibold mb-1">Phiên Pomodoro</div>
+                            <div class="text-3xl font-bold text-pink-500 flex items-center gap-2"><span id="dash-pomodoro">0</span> 🍅</div>
+                        </div>
+                    </div>
+                    <div class="glass-card p-6 flex items-center justify-between">
+                        <div>
+                            <div class="text-gray-400 text-sm font-semibold mb-1">Sinh mệnh</div>
+                            <div id="dash-hearts" class="text-2xl mt-2">❤️❤️❤️❤️❤️</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-card p-8">
+                    <h2 class="text-xl font-bold mb-4">Nhiệm vụ hàng ngày</h2>
+                    <div class="flex gap-4 mb-4">
+                        <input type="text" id="task-input" placeholder="Nhập mục tiêu hôm nay..." class="input-box" onkeypress="if(event.key==='Enter') addTask()">
+                        <button onclick="addTask()" class="btn-primary px-6">Thêm</button>
+                    </div>
+                    <ul id="task-list" class="space-y-3"></ul>
+                </div>
+            </div>
+
+            <div id="tab-tools" class="tab-content hidden fade-in text-center pt-10">
+                <h1 class="text-3xl font-bold mb-2">Đồng hồ Pomodoro 🍅</h1>
+                <p class="text-gray-400 mb-10">Tập trung cao độ - Nâng cao hiệu suất</p>
+
+                <div class="glass-card inline-block p-12 rounded-full border-4 border-orange-500/30 relative">
+                    <div id="timer-display" class="text-7xl font-black tabular-nums tracking-tighter text-gradient">25:00</div>
+                    <div id="timer-status" class="absolute bottom-6 left-0 right-0 text-gray-400 text-sm uppercase tracking-widest font-bold">Sẵn sàng</div>
+                </div>
+
+                <div class="flex justify-center gap-4 mt-12">
+                    <button id="btn-pom-start" onclick="startPomodoro()" class="btn-primary py-3 px-8 text-lg w-40">▶ Bắt đầu</button>
+                    <button onclick="resetPomodoro()" class="bg-white/10 hover:bg-white/20 text-white py-3 px-8 rounded-xl font-bold transition w-40">🔄 Làm lại</button>
+                </div>
+            </div>
+
+            <div id="tab-ai" class="tab-content hidden fade-in flex flex-col h-[calc(100vh-100px)]">
+                <h1 class="text-3xl font-bold mb-2">Trợ lý AI SunBot 🤖</h1>
+                <p class="text-gray-400 mb-6">Hỏi đáp đa môn theo phương pháp gợi mở Socratic</p>
+
+                <div class="glass-card flex-1 flex flex-col overflow-hidden border border-orange-500/20">
+                    <div id="ai-chat-box" class="flex-1 overflow-y-auto p-6 flex flex-col gap-4">
+                        </div>
+                    
+                    <div class="p-4 border-t border-white/10 bg-white/5 flex gap-4">
+                        <input type="text" id="ai-input" placeholder="Ví dụ: Làm sao tính tích phân từng phần?" class="input-box flex-1" onkeypress="if(event.key==='Enter') sendAiMessage()">
+                        <button onclick="sendAiMessage()" class="btn-primary px-8">Gửi ↗</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-community" class="tab-content hidden fade-in">
+                <h1 class="text-3xl font-bold mb-6">Diễn đàn Hỏi - Đáp 👥</h1>
+                
+                <div class="glass-card p-6 mb-8 border border-yellow-500/20">
+                    <h3 class="font-bold mb-4">Tạo bài đăng mới</h3>
+                    <input type="text" id="forum-title" placeholder="Tiêu đề câu hỏi..." class="input-box mb-4">
+                    <textarea id="forum-content" rows="3" placeholder="Chi tiết thắc mắc của bạn..." class="input-box mb-4 resize-none"></textarea>
+                    <button onclick="createPost()" class="btn-primary py-2 px-6">Đăng bài</button>
+                </div>
+
+                <div id="forum-feed" class="flex flex-col gap-6">
+                    </div>
+            </div>
+
+        </main>
     </div>
-  );
-}
 
-// ─── TAB: CỘNG ĐỒNG (TÍCH HỢP LOCAL STORAGE) ──────────────────────────────────
-function CommunityTab({ profile }) {
-  const [posts, setPosts] = useState(() => LS.get("sl_forum", DEFAULT_POSTS));
-  const [newTitle, setNewTitle] = useState("");
-  const [newContent, setNewContent] = useState("");
-  const [commentInput, setCommentInput] = useState({});
+    <audio id="ting-sound" src="https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg" preload="auto"></audio>
 
-  // Cứ mỗi khi mảng posts thay đổi, lưu ngay xuống Local Storage
-  useEffect(() => {
-    LS.set("sl_forum", posts);
-  }, [posts]);
+    <script>
+        /* --- 1. QUẢN LÝ STATE TỔNG (LOCAL STORAGE) --- */
+        let userProfile = JSON.parse(localStorage.getItem('sl_profile')) || null;
+        let forumPosts = JSON.parse(localStorage.getItem('sl_forum')) || [
+            { id: 1, author: "Gia sư Mẫu", title: "Xin chào Cộng đồng Sunlogic!", content: "Hãy đặt câu hỏi bài tập khó của bạn tại đây để mọi người cùng giải quyết nhé.", votes: 10, isSolved: false, comments: [] }
+        ];
+        let tasks = JSON.parse(localStorage.getItem('sl_tasks')) || [];
 
-  const createPost = () => {
-    if (!newTitle.trim() || !newContent.trim()) return;
-    const newPost = {
-      id: Date.now(),
-      user: profile.name,
-      avatar: profile.avatar,
-      time: "Vừa xong",
-      title: newTitle,
-      content: newContent,
-      tag: "Hỏi đáp",
-      votes: 0,
-      isSolved: false,
-      comments: []
-    };
-    setPosts([newPost, ...posts]);
-    setNewTitle("");
-    setNewContent("");
-  };
+        const today = new Date().toISOString().split('T')[0];
 
-  const upvote = (id) => {
-    setPosts(posts.map(p => p.id === id ? { ...p, votes: p.votes + 1 } : p));
-  };
-
-  const addComment = (postId) => {
-    const text = commentInput[postId];
-    if (!text || !text.trim()) return;
-    setPosts(posts.map(p => {
-      if (p.id === postId) {
-        return {
-          ...p,
-          comments: [...p.comments, { id: Date.now(), author: profile.name, content: text, isCorrect: false }]
+        // Khởi động App
+        window.onload = () => {
+            if (userProfile) {
+                checkDailyLogic();
+                showMainApp();
+            }
         };
-      }
-      return p;
-    }));
-    setCommentInput({ ...commentInput, [postId]: "" });
-  };
 
-  const markCorrect = (postId, commentId) => {
-    setPosts(posts.map(p => {
-      if (p.id === postId) {
-        const updatedComments = p.comments.map(c => ({ ...c, isCorrect: c.id === commentId }));
-        return { ...p, isSolved: true, comments: updatedComments };
-      }
-      return p;
-    }));
-  };
+        // Logic check qua ngày
+        function checkDailyLogic() {
+            if (userProfile.lastLogin !== today) {
+                userProfile.streak += 1;
+                userProfile.lastLogin = today;
+                saveProfile();
+            }
+        }
 
-  return (
-    <div>
-      <h1 style={{ fontSize: 26, fontWeight: 800, marginBottom: 24 }}>👥 Diễn đàn Hỏi - Đáp</h1>
-      
-      {/* Form đăng bài */}
-      <div className="glass-card" style={{ padding: 20, marginBottom: 32 }}>
-        <h3 style={{ marginBottom: 16, fontSize: 16 }}>Tạo bài đăng mới</h3>
-        <input className="input-box" style={{ marginBottom: 10 }} placeholder="Tiêu đề câu hỏi..." value={newTitle} onChange={e => setNewTitle(e.target.value)} />
-        <textarea className="input-box" style={{ marginBottom: 10, minHeight: 80, resize: "none" }} placeholder="Nội dung chi tiết..." value={newContent} onChange={e => setNewContent(e.target.value)} />
-        <button className="btn-primary" onClick={createPost}>Đăng câu hỏi</button>
-      </div>
+        function saveProfile() { localStorage.setItem('sl_profile', JSON.stringify(userProfile)); updateDashboardUI(); }
+        function saveForum() { localStorage.setItem('sl_forum', JSON.stringify(forumPosts)); renderForum(); }
+        function saveTasks() { localStorage.setItem('sl_tasks', JSON.stringify(tasks)); renderTasks(); }
 
-      {/* Feed bài viết */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        {posts.map(post => (
-          <div key={post.id} className="glass-card" style={{ padding: 24 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
-              <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#444", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12 }}>{post.avatar}</div>
-                <span style={{ fontSize: 14, fontWeight: "bold", color: "#FFD60A" }}>{post.user}</span>
-                <span style={{ fontSize: 12, color: "#888" }}>• {post.time}</span>
-              </div>
-              {post.isSolved && <span style={{ background: "rgba(0,200,100,0.2)", color: "#00C864", padding: "4px 8px", borderRadius: 6, fontSize: 12, fontWeight: "bold" }}>✓ Đã giải quyết</span>}
-            </div>
-            <h3 style={{ fontSize: 18, marginBottom: 8 }}>{post.title}</h3>
-            <p style={{ fontSize: 14, color: "#ccc", marginBottom: 16 }}>{post.content}</p>
+        /* --- 2. AUTHENTICATION --- */
+        function handleLogin() {
+            const name = document.getElementById('login-name').value.trim();
+            const email = document.getElementById('login-email').value.trim();
+            const pass = document.getElementById('login-pass').value.trim();
+
+            if (!email || pass.length < 6) return alert("Vui lòng nhập Email và Mật khẩu hợp lệ!");
+
+            userProfile = {
+                name: name || email.split('@')[0],
+                email: email,
+                avatar: (name || email)[0].toUpperCase(),
+                streak: 1,
+                pomodoroCount: 0,
+                hearts: 5,
+                lastLogin: today
+            };
+            saveProfile();
+            showMainApp();
+        }
+
+        function handleLogout() {
+            localStorage.removeItem('sl_profile');
+            location.reload();
+        }
+
+        function showMainApp() {
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('main-app').classList.remove('hidden');
+            updateDashboardUI();
+            renderTasks();
+            renderForum();
+            appendAiMsg(`Chào ${userProfile.name}! Mình là Trợ lý AI SunBot. Bạn cần hỏi bài môn gì?`, 'ai');
+        }
+
+        /* --- 3. ĐIỀU HƯỚNG TABS --- */
+        function switchTab(tabId, el) {
+            // Xử lý Active Menu
+            document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+            el.classList.add('active');
+
+            // Ẩn tất cả nội dung
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.add('hidden'));
             
-            <div style={{ display: "flex", gap: 16, borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: 16, marginBottom: 16 }}>
-              <span onClick={() => upvote(post.id)} style={{ cursor: "pointer", color: "#FF6B2B", fontSize: 14 }}>▲ {post.votes} Hữu ích</span>
-              <span style={{ color: "#aaa", fontSize: 14 }}>💬 {post.comments.length} Trả lời</span>
-            </div>
+            // Hiện tab đích
+            document.getElementById('tab-' + tabId).classList.remove('hidden');
+        }
 
-            {/* Hiển thị bình luận */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 16 }}>
-              {post.comments.map(c => (
-                <div key={c.id} style={{ background: c.isCorrect ? "rgba(0,200,100,0.1)" : "rgba(255,255,255,0.05)", padding: 12, borderRadius: 8, borderLeft: c.isCorrect ? "4px solid #00C864" : "none" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                    <span style={{ fontWeight: "bold", fontSize:
+        /* --- 4. DASHBOARD & TASKS --- */
+        function updateDashboardUI() {
+            if(!userProfile) return;
+            document.getElementById('user-name').innerText = userProfile.name;
+            document.getElementById('user-avatar').innerText = userProfile.avatar;
+            document.getElementById('sidebar-streak').innerText = userProfile.streak;
+            document.getElementById('dash-streak').innerText = userProfile.streak;
+            document.getElementById('dash-pomodoro').innerText = userProfile.pomodoroCount;
+            
+            // Render Hearts
+            let heartsHTML = '';
+            for(let i=0; i<5; i++) heartsHTML += i < userProfile.hearts ? '❤️' : '🤍';
+            document.getElementById('dash-hearts').innerHTML = heartsHTML;
+        }
+
+        function addTask() {
+            const input = document.getElementById('task-input');
+            if(!input.value.trim()) return;
+            tasks.push({ id: Date.now(), text: input.value, done: false });
+            input.value = '';
+            saveTasks();
+        }
+
+        function toggleTask(id) {
+            const t = tasks.find(t => t.id === id);
+            if(t) { t.done = !t.done; saveTasks(); }
+        }
+
+        function delTask(id) {
+            tasks = tasks.filter(t => t.id !== id);
+            saveTasks();
+        }
+
+        function renderTasks() {
+            const list = document.getElementById('task-list');
+            list.innerHTML = tasks.map(t => `
+                <li class="flex items-center gap-3 bg-white/5 p-3 rounded-xl border border-white/10 ${t.done ? 'opacity-50' : ''}">
+                    <input type="checkbox" ${t.done ? 'checked' : ''} onchange="toggleTask(${t.id})" class="w-5 h-5 accent-orange-500 cursor-pointer">
+                    <span class="flex-1 ${t.done ? 'line-through' : ''}">${t.text}</span>
+                    <i class="fa-solid fa-trash text-gray-500 hover:text-red-500 cursor-pointer" onclick="delTask(${t.id})"></i>
+                </li>
+            `).join('');
+        }
+
+        /* --- 5. POMODORO ĐẾM NGƯỢC --- */
+        let pomTime = 25 * 60;
+        let pomInterval = null;
+        let isPomRunning = false;
+
+        function updatePomDisplay() {
+            const m = Math.floor(pomTime / 60).toString().padStart(2, '0');
+            const s = (pomTime % 60).toString().padStart(2, '0');
+            document.getElementById('timer-display').innerText = `${m}:${s}`;
+        }
+
+        function startPomodoro() {
+            const btn = document.getElementById('btn-pom-start');
+            if (isPomRunning) {
+                // Pause
+                clearInterval(pomInterval);
+                isPomRunning = false;
+                btn.innerHTML = "▶ Tiếp tục";
+                document.getElementById('timer-status').innerText = "Đã tạm dừng";
+            } else {
+                // Start
+                isPomRunning = true;
+                btn.innerHTML = "⏸ Tạm dừng";
+                document.getElementById('timer-status').innerText = "Đang tập trung...";
+                document.getElementById('timer-status').classList.add('text-orange-500');
+                
+                pomInterval = setInterval(() => {
+                    pomTime--;
+                    updatePomDisplay();
+                    if (pomTime <= 0) {
+                        clearInterval(pomInterval);
+                        isPomRunning = false;
+                        document.getElementById('ting-sound').play();
+                        
+                        // Thưởng
+                        userProfile.pomodoroCount += 1;
+                        saveProfile();
+                        
+                        alert("Tuyệt vời! Bạn đã hoàn thành 1 phiên Pomodoro.");
+                        resetPomodoro();
+                    }
+                }, 1000);
+            }
+        }
+
+        function resetPomodoro() {
+            clearInterval(pomInterval);
+            isPomRunning = false;
+            pomTime = 25 * 60;
+            updatePomDisplay();
+            document.getElementById('btn-pom-start').innerHTML = "▶ Bắt đầu";
+            document.getElementById('timer-status').innerText = "Sẵn sàng";
+            document.getElementById('timer-status').classList.remove('text-orange-500');
+        }
+
+        /* --- 6. AI TUTOR (TỪ KHÓA) --- */
+        const AI_KNOWLEDGE = [
+            { keys: ["dien tich", "hinh tron"], ans: "Diện tích hình tròn là **S = π × R²** bạn nhé!" },
+            { keys: ["tich phan", "tung phan"], ans: "Với bài tích phân từng phần $\\int u\\,dv$, hãy dùng mẹo 'Kẻ bảng' (Múa cột): Cột 1 đạo hàm (chọn u là log/đa thức), Cột 2 nguyên hàm (dv là lượng giác/mũ). Thử xem!" },
+            { keys: ["vo nhat", "kim lan"], ans: "Truyện 'Vợ nhặt' phản ánh nạn đói 1945. Điểm sáng là khát vọng sống và tình người của Tràng, Thị, cụ Tứ giữa ranh giới sinh tử." },
+            { keys: ["dao ham", "x"], ans: "Đạo hàm cơ bản: Đạo hàm của $x^n$ là $n.x^{n-1}$. Bạn vướng bài nào cứ gõ ra nhé." }
+        ];
+
+        function removeAccents(str) { return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); }
+
+        function sendAiMessage() {
+            const input = document.getElementById('ai-input');
+            const text = input.value.trim();
+            if(!text) return;
+
+            appendAiMsg(text, 'user');
+            input.value = '';
+
+            // Loading
+            const box = document.getElementById('ai-chat-box');
+            const typingId = 'typing-' + Date.now();
+            box.innerHTML += `<div id="${typingId}" class="flex gap-3"><div class="w-8 h-8 rounded-full bg-gradient-to-br from-orange-500 to-yellow-500 flex items-center justify-center">🤖</div><div class="bg-white/5 p-3 rounded-2xl rounded-tl-none chat-typing border border-white/10"><span></span><span></span><span></span></div></div>`;
+            box.scrollTop = box.scrollHeight;
+
+            // Xử lý AI
+            setTimeout(() => {
+                document.getElementById(typingId).remove();
+                
+                const cleanText = removeAccents(text);
+                let response = "Câu hỏi hay đấy! Thay vì đưa đáp án thẳng, bạn đã thử hướng làm nào chưa? Hãy phân tích thử dữ kiện đề bài cho xem.";
+                
+                for(let item of AI_KNOWLEDGE) {
+                    if(item.keys.some(k => cleanText.includes(removeAccents(k)))) {
+                        response = item.ans; break;
+                    }
+                }
+                appendAiMsg(response, 'ai');
+            }, 1000);
+        }
+
+        function appendAiMsg(text, role) {
+            const box = document.getElementById('ai-chat-box');
+            if (role === 'user') {
+                box.innerHTML += `<div class="flex justify-end"><div class="bg-gradient-to-r from-orange-500 to-yellow-500 text-white p-3 rounded-2xl rounded-tr-none max-w-[80%]">${text}</div></div>`;
+            } else {
+                // Parse markdown basic bold
+                let formatted = text.replace(/\*\*(.*?)\*\*/g, '<b class="text-orange-400">$1</b>');
+                box.innerHTML += `<div class="flex gap-3"><div class="w-8 h-8 shrink-0 rounded-full bg-gradient-to-br from-orange-500 to-yellow-500 flex items-center justify-center font-bold shadow-lg">🤖</div><div class="bg-white/5 p-3 rounded-2xl rounded-tl-none max-w-[80%] border border-white/10 leading-relaxed text-gray-200">${formatted}</div></div>`;
+            }
+            box.scrollTop = box.scrollHeight;
+        }
+
+        /* --- 7. FORUM CỘNG ĐỒNG --- */
+        function renderForum() {
+            const feed = document.getElementById('forum-feed');
+            feed.innerHTML = forumPosts.map(post => `
+                <div class="glass-card p-6">
+                    <div class="flex justify-between items-center mb-3">
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-xs font-bold">${post.author[0]}</div>
+                            <span class="font-bold text-orange-400">${post.author}</span>
+                        </div>
+                        ${post.isSolved ? '<span class="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded font-bold">✓ Đã giải quyết</span>' : ''}
+                    </div>
+                    <h3 class="text-lg font-bold mb-2">${post.title}</h3>
+                    <p class="text-gray-400 text-sm mb-4">${post.content}</p>
+                    
+                    <div class="flex gap-4 mb-4 border-b border-white/10 pb-4">
+                        <button onclick="upvotePost(${post.id})" class="text-sm font-bold text-orange-500 hover:text-orange-400">▲ ${post.votes} Hữu ích</button>
+                    </div>
+
+                    <div class="space-y-3 mb-4 pl-4 border-l-2 border-white/10">
+                        ${post.comments.map(c => `
+                            <div class="bg-white/5 p-3 rounded-xl border ${c.isCorrect ? 'border-green-500/50' : 'border-white/5'}">
+                                <div class="flex justify-between mb-1">
+                                    <span class="font-bold text-sm text-gray-300">${c.author}</span>
+                                    ${c.isCorrect ? '<span class="text-green-400 text-xs font-bold">★ Hay nhất</span>' : `<button onclick="markCorrect(${post.id}, ${c.id})" class="text-xs text-gray-500 hover:text-green-400">Đánh dấu Đúng</button>`}
+                                </div>
+                                <p class="text-sm text-gray-400">${c.content}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+
+                    <div class="flex gap-2">
+                        <input type="text" id="cmt-${post.id}" placeholder="Viết câu trả lời..." class="input-box text-sm py-2">
+                        <button onclick="addComment(${post.id})" class="bg-white/10 hover:bg-white/20 px-4 rounded-xl text-sm font-bold transition">Gửi</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function createPost() {
+            const title = document.getElementById('forum-title').value.trim();
+            const content = document.getElementById('forum-content').value.trim();
+            if(!title || !content) return;
+            
+            forumPosts.unshift({
+                id: Date.now(),
+                author: userProfile.name,
+                title, content,
+                votes: 0, isSolved: false, comments: []
+            });
+            document.getElementById('forum-title').value = '';
+            document.getElementById('forum-content').value = '';
+            saveForum();
+        }
+
+        function upvotePost(id) {
+            const p = forumPosts.find(p => p.id === id);
+            if(p) { p.votes++; saveForum(); }
+        }
+
+        function addComment(postId) {
+            const input = document.getElementById(`cmt-${postId}`);
+            if(!input.value.trim()) return;
+            const p = forumPosts.find(p => p.id === postId);
+            if(p) {
+                p.comments.push({ id: Date.now(), author: userProfile.name, content: input.value, isCorrect: false });
+                saveForum();
+            }
+        }
+
+        function markCorrect(postId, cmtId) {
+            const p = forumPosts.find(p => p.id === postId);
+            if(p) {
+                p.isSolved = true;
+                p.comments.forEach(c => c.isCorrect = (c.id === cmtId));
+                saveForum();
+            }
+        }
+    </script>
+</body>
+</html>
