@@ -1,234 +1,789 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, createContext, useContext, useReducer } from "react";
+import { Play, Pause, RotateCcw, Plus, CheckCircle, Circle, Trash2, Send, Heart, Flame, Clock, Users, ThumbsUp, ChevronRight, Zap, Brain, BookOpen, Star, MessageSquare, Award, HelpCircle, Settings, Database, Check, X } from "lucide-react";
 
-/* ─── CONFETTI ─── */
-function Confetti({ active, onDone }) {
-  const pieces = Array.from({ length: 60 }, (_, i) => ({
-    id: i,
-    x: Math.random() * 100,
-    color: ["#FF512F","#F09819","#4FACFE","#00f2fe","#a8ff78","#ff758c"][i % 6],
-    delay: Math.random() * 0.8,
-    size: 6 + Math.random() * 8,
-    rotation: Math.random() * 360,
-  }));
-  useEffect(() => {
-    if (active) { const t = setTimeout(onDone, 3000); return () => clearTimeout(t); }
-  }, [active, onDone]);
-  if (!active) return null;
-  return (
-    <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
-      {pieces.map(p => (
-        <div key={p.id} style={{
-          position:"absolute", left:`${p.x}%`, top:"-20px",
-          width:p.size, height:p.size, background:p.color,
-          borderRadius:Math.random()>0.5?"50%":"2px",
-          transform:`rotate(${p.rotation}deg)`,
-          animation:`confettiFall 2.5s ${p.delay}s ease-in forwards`,
-        }}/>
-      ))}
-      <style>{`@keyframes confettiFall{0%{top:-20px;opacity:1}100%{top:110vh;opacity:0}}`}</style>
-    </div>
-  );
+// ─── GLOBAL STYLES ────────────────────────────────────────────────────────────
+const globalCSS = `
+  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  :root {
+    --cream: #FDFDFD;
+    --primary-start: #FF512F;
+    --primary-end: #F09819;
+    --accent-blue: #4FACFE;
+    --accent-green: #22C55E;
+    --glass-bg: rgba(255,255,255,0.6);
+    --glass-border: rgba(255,255,255,0.25);
+    --text-primary: #1a1a2e;
+    --text-secondary: #6b7280;
+  }
+
+  body { 
+    font-family: 'DM Sans', sans-serif; 
+    background: var(--cream); 
+    color: var(--text-primary);
+    overflow-x: hidden;
+  }
+
+  .sora { font-family: 'Sora', sans-serif; }
+
+  .primary-gradient { background: linear-gradient(135deg, var(--primary-start), var(--primary-end)); }
+  .primary-gradient-text { 
+    background: linear-gradient(135deg, var(--primary-start), var(--primary-end)); 
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .blue-gradient-text {
+    background: linear-gradient(135deg, #4FACFE, #00F2FE);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+
+  .glass {
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.6);
+    border-radius: 20px;
+  }
+
+  .glass-dark {
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.4);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.1);
+    border-radius: 20px;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--primary-start), var(--primary-end));
+    color: white;
+    border: none;
+    border-radius: 14px;
+    font-family: 'Sora', sans-serif;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 20px rgba(255,81,47,0.35);
+    padding: 14px 28px;
+  }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(255,81,47,0.45); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+
+  .btn-ghost {
+    background: rgba(255,255,255,0.7);
+    border: 1.5px solid rgba(0,0,0,0.1);
+    border-radius: 14px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 12px 24px;
+    color: var(--text-primary);
+  }
+  .btn-ghost:hover { background: rgba(255,255,255,0.95); border-color: rgba(0,0,0,0.15); transform: translateY(-1px); }
+
+  .input-field {
+    width: 100%;
+    padding: 14px 18px;
+    background: rgba(255,255,255,0.8);
+    border: 1.5px solid rgba(0,0,0,0.08);
+    border-radius: 14px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    color: var(--text-primary);
+    outline: none;
+    transition: all 0.2s ease;
+  }
+  .input-field:focus { border-color: var(--accent-blue); box-shadow: 0 0 0 3px rgba(79,172,254,0.15); }
+  .input-field::placeholder { color: #aaa; }
+
+  /* Orb blobs */
+  .orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(80px);
+    pointer-events: none;
+    z-index: 0;
+    animation: float 8s ease-in-out infinite;
+  }
+  @keyframes float {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(20px, -30px) scale(1.05); }
+    66% { transform: translate(-15px, 15px) scale(0.95); }
+  }
+
+  /* Pomodoro ring */
+  .pomodoro-ring { transform: rotate(-90deg); transform-origin: center; }
+  .pomodoro-track { fill: none; stroke: rgba(255,81,47,0.1); }
+  .pomodoro-progress { 
+    fill: none; 
+    stroke: url(#pomGrad); 
+    stroke-linecap: round; 
+    transition: stroke-dashoffset 1s linear; 
+  }
+
+  /* Chat typing animation */
+  @keyframes typing-dot {
+    0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+    30% { opacity: 1; transform: translateY(-4px); }
+  }
+  .typing-dot { animation: typing-dot 1.2s ease-in-out infinite; }
+  .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+  /* Typewriter */
+  @keyframes cursor-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+  .cursor { display: inline-block; width: 2px; height: 1em; background: var(--accent-blue); margin-left: 2px; animation: cursor-blink 0.8s ease-in-out infinite; vertical-align: text-bottom; }
+
+  /* Emoji float */
+  @keyframes emoji-float {
+    0% { transform: translateY(0) rotate(0deg) scale(1); opacity: 1; }
+    100% { transform: translateY(-100vh) rotate(360deg) scale(0.3); opacity: 0; }
+  }
+  .emoji-float {
+    position: fixed;
+    font-size: 28px;
+    pointer-events: none;
+    z-index: 9999;
+    animation: emoji-float 3s ease-out forwards;
+  }
+
+  /* Streak popup */
+  @keyframes streak-pop {
+    0% { transform: scale(0) translateY(10px); opacity: 0; }
+    60% { transform: scale(1.3) translateY(-5px); opacity: 1; }
+    100% { transform: scale(1) translateY(0); opacity: 1; }
+  }
+  .streak-pop { animation: streak-pop 0.5s ease-out forwards; }
+
+  /* Confetti */
+  @keyframes confetti-fall {
+    0% { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(80px) rotate(720deg); opacity: 0; }
+  }
+  .confetti-piece { animation: confetti-fall 1.5s ease-in forwards; }
+
+  /* Slide in */
+  @keyframes slide-up {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  .slide-up { animation: slide-up 0.4s ease-out forwards; }
+
+  /* Shake for hearts */
+  @keyframes heartbeat {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.3); }
+  }
+  .heartbeat { animation: heartbeat 0.4s ease-in-out; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 3px; }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .dashboard-grid { grid-template-columns: 1fr !important; }
+    .login-grid { grid-template-columns: 1fr !important; }
+    .login-hero { display: none !important; }
+    .navbar-hide-sm { display: none !important; }
+  }
+`;
+
+// ─── STATE MANAGEMENT ─────────────────────────────────────────────────────────
+const defaultState = {
+  user: { email: "", isAuthenticated: false },
+  gamification: {
+    hearts: 5,
+    streak: 0,
+    totalMinutes: 0,
+    lastActiveDate: "",
+    streakUpdatedToday: false,
+  },
+  tasks: [
+    { id: "1", title: "Đọc chương 1: Giới hạn hàm số", completed: false },
+    { id: "2", title: "Làm bài tập đạo hàm trang 45", completed: true },
+  ],
+};
+
+function loadState() {
+  try {
+    const s = localStorage.getItem("sunlogic_state");
+    return s ? { ...defaultState, ...JSON.parse(s) } : defaultState;
+  } catch { return defaultState; }
 }
 
-/* ─── FLOATING EMOJIS ─── */
-function FloatingEmojis({ active, onDone }) {
-  const items = Array.from({ length: 20 }, (_, i) => ({
-    id: i, emoji: i % 2 === 0 ? "🔥" : "❤️",
-    x: 5 + Math.random() * 90, delay: Math.random() * 1.5,
-  }));
-  useEffect(() => {
-    if (active) { const t = setTimeout(onDone, 3000); return () => clearTimeout(t); }
-  }, [active, onDone]);
-  if (!active) return null;
-  return (
-    <div className="fixed inset-0 pointer-events-none z-40 overflow-hidden">
-      {items.map(p => (
-        <div key={p.id} style={{
-          position:"absolute", left:`${p.x}%`, bottom:"-40px", fontSize:"28px",
-          animation:`floatUp 2.5s ${p.delay}s ease-out forwards`,
-        }}>{p.emoji}</div>
-      ))}
-      <style>{`@keyframes floatUp{0%{bottom:-40px;opacity:1}100%{bottom:110vh;opacity:0}}`}</style>
-    </div>
-  );
+function saveState(state) {
+  try { localStorage.setItem("sunlogic_state", JSON.stringify(state)); } catch {}
 }
 
-/* ─── SUNLOGIC LOGO ─── */
-function SunlogicLogo({ size = 44 }) {
+const AppContext = createContext(null);
+
+function appReducer(state, action) {
+  switch (action.type) {
+    case "LOGIN":
+      return { ...state, user: { email: action.email, isAuthenticated: true } };
+    case "LOGOUT":
+      return { ...state, user: { email: "", isAuthenticated: false } };
+    case "ADD_TASK":
+      return { ...state, tasks: [...state.tasks, { id: Date.now().toString(), title: action.title, completed: false }] };
+    case "ADD_TASKS_BULK":
+      return { ...state, tasks: [...state.tasks, ...action.tasks] };
+    case "TOGGLE_TASK":
+      return { ...state, tasks: state.tasks.map(t => t.id === action.id ? { ...t, completed: !t.completed } : t) };
+    case "DELETE_TASK":
+      return { ...state, tasks: state.tasks.filter(t => t.id !== action.id) };
+    case "POMODORO_COMPLETE": {
+      const today = new Date().toDateString();
+      const alreadyStreaked = state.gamification.streakUpdatedToday && state.gamification.lastActiveDate === today;
+      return {
+        ...state,
+        gamification: {
+          ...state.gamification,
+          totalMinutes: state.gamification.totalMinutes + 25,
+          streak: alreadyStreaked ? state.gamification.streak : state.gamification.streak + 1,
+          lastActiveDate: today,
+          streakUpdatedToday: true,
+        }
+      };
+    }
+    case "CHECK_DAILY": {
+      const today = new Date().toDateString();
+      const g = state.gamification;
+      if (g.lastActiveDate && g.lastActiveDate !== today) {
+        const newHearts = Math.max(0, g.hearts - 1);
+        return {
+          ...state,
+          gamification: {
+            ...g,
+            hearts: newHearts,
+            streak: newHearts === 0 ? 0 : g.streak,
+            streakUpdatedToday: false,
+          }
+        };
+      }
+      return state;
+    }
+    default: return state;
+  }
+}
+
+function AppProvider({ children }) {
+  const [state, dispatch] = useReducer(appReducer, null, loadState);
+  useEffect(() => { saveState(state); }, [state]);
+  useEffect(() => {
+    dispatch({ type: "CHECK_DAILY" });
+  }, []);
+  return <AppContext.Provider value={{ state, dispatch }}>{children}</AppContext.Provider>;
+}
+
+function useApp() { return useContext(AppContext); }
+
+// ─── LOGO ─────────────────────────────────────────────────────────────────────
+function SunlogicLogo({ size = 40 }) {
   return (
-    <div className="flex items-center gap-3">
-      <svg width={size} height={size} viewBox="0 0 100 100">
+    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <svg width={size} height={size} viewBox="0 0 40 40">
         <defs>
-          <radialGradient id="bgGrad" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#4FACFE"/>
-            <stop offset="100%" stopColor="#00f2fe"/>
-          </radialGradient>
-          <filter id="glow"><feGaussianBlur stdDeviation="2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#4FACFE" />
+            <stop offset="100%" stopColor="#00F2FE" />
+          </linearGradient>
         </defs>
-        <circle cx="50" cy="50" r="46" fill="url(#bgGrad)" opacity="0.15" stroke="#4FACFE" strokeWidth="2"/>
-        {[0,30,60,90,120,150,180,210,240,270,300,330].map((a,i)=>{
-          const r=Math.PI*a/180, x1=50+32*Math.cos(r), y1=50+32*Math.sin(r), x2=50+44*Math.cos(r), y2=50+44*Math.sin(r);
-          return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#4FACFE" strokeWidth={i%3===0?"3":"1.5"} opacity="0.7"/>;
+        {/* Outer ring with rays */}
+        <circle cx="20" cy="20" r="18" fill="none" stroke="url(#logoGrad)" strokeWidth="1.5" />
+        {[0,45,90,135,180,225,270,315].map((angle, i) => {
+          const rad = (angle * Math.PI) / 180;
+          const x1 = 20 + 14 * Math.cos(rad), y1 = 20 + 14 * Math.sin(rad);
+          const x2 = 20 + 18 * Math.cos(rad), y2 = 20 + 18 * Math.sin(rad);
+          return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="url(#logoGrad)" strokeWidth="1.5" strokeLinecap="round" />;
         })}
-        <circle cx="50" cy="50" r="28" fill="url(#bgGrad)" opacity="0.2"/>
-        <circle cx="50" cy="50" r="22" fill="white" opacity="0.1"/>
-        {/* neural dots */}
-        {[[50,35],[38,55],[62,55],[50,65]].map(([x,y],i)=>(
-          <circle key={i} cx={x} cy={y} r="3" fill="#4FACFE" filter="url(#glow)"/>
-        ))}
-        {[[50,35,38,55],[50,35,62,55],[38,55,50,65],[62,55,50,65],[38,55,62,55]].map(([x1,y1,x2,y2],i)=>(
-          <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#4FACFE" strokeWidth="1" opacity="0.5"/>
-        ))}
-        {/* bulb */}
-        <circle cx="50" cy="48" r="10" fill="#F09819" opacity="0.85" filter="url(#glow)"/>
-        <path d="M46 54 L54 54 L53 60 L47 60 Z" fill="#F09819" opacity="0.7"/>
-        {/* 4 tiny icons around */}
-        <text x="20" y="38" fontSize="10" fill="#4FACFE" opacity="0.9">?</text>
-        <text x="73" y="38" fontSize="9" fill="#4FACFE" opacity="0.9">⚙</text>
-        <text x="18" y="68" fontSize="8" fill="#4FACFE" opacity="0.9">⟨⟩</text>
-        <text x="74" y="68" fontSize="9" fill="#4FACFE" opacity="0.9">✓</text>
+        {/* Inner circle */}
+        <circle cx="20" cy="20" r="11" fill="rgba(79,172,254,0.08)" stroke="url(#logoGrad)" strokeWidth="1" />
+        {/* Bulb */}
+        <path d="M20 13 C17 13 15 15 15 17.5 C15 19.5 16.5 21 17 22 L17 23 L23 23 L23 22 C23.5 21 25 19.5 25 17.5 C25 15 23 13 20 13 Z" fill="url(#logoGrad)" opacity="0.8" />
+        <line x1="17" y1="24" x2="23" y2="24" stroke="url(#logoGrad)" strokeWidth="1.2" />
+        <line x1="17.5" y1="25.5" x2="22.5" y2="25.5" stroke="url(#logoGrad)" strokeWidth="1" />
+        {/* Small icons around */}
+        <text x="13.5" y="18" fontSize="4" fill="#4FACFE" opacity="0.9">?</text>
+        <text x="25" y="18" fontSize="3.5" fill="#4FACFE" opacity="0.9">⚙</text>
+        <text x="13" y="26" fontSize="3.5" fill="#4FACFE" opacity="0.9">≡</text>
+        <text x="25.5" y="26" fontSize="3.5" fill="#22C55E" opacity="0.9">✓</text>
       </svg>
-      <span style={{
-        background:"linear-gradient(90deg,#FF512F,#F09819,#4FACFE)",
-        WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
-        fontFamily:"'Georgia',serif", fontSize:"22px", fontWeight:"800", letterSpacing:"1px"
-      }}>Sunlogic</span>
+      <span className="sora" style={{ fontSize: 20, fontWeight: 800 }}>
+        <span className="primary-gradient-text">Sun</span><span className="blue-gradient-text">logic</span>
+      </span>
     </div>
   );
 }
 
-/* ─── POMODORO ─── */
+// ─── LOGIN PAGE ────────────────────────────────────────────────────────────────
+function LoginPage() {
+  const { dispatch } = useApp();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && password.length > 6;
+
+  const handleSubmit = () => {
+    if (!isValid) return;
+    setLoading(true);
+    setTimeout(() => {
+      dispatch({ type: "LOGIN", email });
+      setLoading(false);
+    }, 800);
+  };
+
+  const handleKeyDown = (e) => { if (e.key === "Enter" && isValid) handleSubmit(); };
+
+  return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", position: "relative" }}>
+      {/* Orbs */}
+      <div className="orb" style={{ width: 400, height: 400, background: "rgba(255,81,47,0.12)", top: "5%", left: "-10%" }} />
+      <div className="orb" style={{ width: 350, height: 350, background: "rgba(79,172,254,0.12)", top: "40%", right: "-8%", animationDelay: "3s" }} />
+      <div className="orb" style={{ width: 250, height: 250, background: "rgba(240,152,25,0.1)", bottom: "5%", left: "30%", animationDelay: "5s" }} />
+
+      <div className="login-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0, maxWidth: 960, width: "100%", borderRadius: 28, overflow: "hidden", boxShadow: "0 24px 80px rgba(0,0,0,0.12)", position: "relative", zIndex: 1 }}>
+        
+        {/* Left Hero */}
+        <div className="login-hero" style={{
+          background: "linear-gradient(145deg, #0f0c29, #302b63, #24243e)",
+          padding: "52px 44px",
+          display: "flex", flexDirection: "column", justifyContent: "space-between",
+          position: "relative", overflow: "hidden"
+        }}>
+          <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at 30% 70%, rgba(255,81,47,0.2) 0%, transparent 60%), radial-gradient(ellipse at 80% 20%, rgba(79,172,254,0.2) 0%, transparent 60%)" }} />
+          
+          <div style={{ position: "relative", zIndex: 1 }}>
+            <SunlogicLogo size={44} />
+          </div>
+
+          <div style={{ position: "relative", zIndex: 1 }}>
+            {/* Decorative learning path */}
+            <div style={{ marginBottom: 40, display: "flex", flexDirection: "column", gap: 12 }}>
+              {[
+                { icon: "🧠", label: "Kỹ thuật Pomodoro", desc: "Focus sâu 25 phút" },
+                { icon: "🤖", label: "AI Tutor Socratic", desc: "Học qua câu hỏi" },
+                { icon: "🔥", label: "Streak & Gamification", desc: "Duy trì thói quen" },
+              ].map((item, i) => (
+                <div key={i} className="slide-up" style={{ animationDelay: `${i * 0.15}s`, display: "flex", alignItems: "center", gap: 14, background: "rgba(255,255,255,0.07)", borderRadius: 14, padding: "12px 16px", border: "1px solid rgba(255,255,255,0.1)" }}>
+                  <span style={{ fontSize: 22 }}>{item.icon}</span>
+                  <div>
+                    <div style={{ color: "white", fontFamily: "Sora", fontWeight: 600, fontSize: 14 }}>{item.label}</div>
+                    <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 12 }}>{item.desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <h1 className="sora" style={{ fontSize: 26, fontWeight: 800, color: "white", lineHeight: 1.3, marginBottom: 16 }}>
+              Học thông minh hơn,<br />
+              <span style={{ background: "linear-gradient(135deg, #FF512F, #F09819)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>không cần học cực hơn</span>
+            </h1>
+            <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 14, lineHeight: 1.7 }}>
+              Học tập giống như leo núi. Nỗ lực mù quáng chỉ mang lại áp lực vô hình. Khi sự chăm chỉ được soi đường bởi phương pháp logic, việc học sẽ trở về với bản chất nguyên thủy của nó.
+            </p>
+          </div>
+
+          <div style={{ position: "relative", zIndex: 1, display: "flex", gap: 20 }}>
+            {[["10K+", "Học viên"], ["4.9★", "Đánh giá"], ["98%", "Hài lòng"]].map(([v, l]) => (
+              <div key={l}>
+                <div className="sora" style={{ color: "white", fontWeight: 700, fontSize: 18 }}>{v}</div>
+                <div style={{ color: "rgba(255,255,255,0.45)", fontSize: 11 }}>{l}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Right Auth Form */}
+        <div style={{ background: "rgba(253,253,253,0.98)", padding: "52px 44px", display: "flex", flexDirection: "column", justifyContent: "center", gap: 28 }}>
+          <div>
+            <h2 className="sora" style={{ fontSize: 24, fontWeight: 700, marginBottom: 8 }}>Chào mừng trở lại 👋</h2>
+            <p style={{ color: "#888", fontSize: 14 }}>Đăng nhập để tiếp tục hành trình học tập</p>
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div>
+              <label style={{ fontSize: 13, fontWeight: 500, color: "#555", marginBottom: 6, display: "block" }}>Email</label>
+              <input className="input-field" type="email" placeholder="your@email.com" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={handleKeyDown} />
+            </div>
+            <div>
+              <label style={{ fontSize: 13, fontWeight: 500, color: "#555", marginBottom: 6, display: "block" }}>Mật khẩu</label>
+              <input className="input-field" type="password" placeholder="Ít nhất 7 ký tự" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={handleKeyDown} />
+            </div>
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <button className="btn-primary" onClick={handleSubmit} disabled={!isValid || loading} style={{ width: "100%", padding: "15px", fontSize: 15 }}>
+              {loading ? (
+                <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                  <span style={{ width: 16, height: 16, border: "2px solid rgba(255,255,255,0.4)", borderTopColor: "white", borderRadius: "50%", animation: "spin 0.8s linear infinite", display: "inline-block" }} />
+                  Đang vào...
+                </span>
+              ) : "Vào không gian học tập →"}
+            </button>
+
+            <button className="btn-ghost" style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+              </svg>
+              Tiếp tục với Google
+            </button>
+          </div>
+
+          <p style={{ fontSize: 12, color: "#aaa", textAlign: "center" }}>
+            Chưa có tài khoản? <span style={{ color: "#4FACFE", cursor: "pointer", fontWeight: 600 }}>Đăng ký miễn phí</span>
+          </p>
+        </div>
+      </div>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+}
+
+// ─── NAVBAR ───────────────────────────────────────────────────────────────────
+function Navbar() {
+  const { state, dispatch } = useApp();
+  const { gamification, user } = state;
+  const [streakAnim, setStreakAnim] = useState(false);
+  const [heartAnim, setHeartAnim] = useState(false);
+  const prevStreak = useRef(gamification.streak);
+
+  useEffect(() => {
+    if (gamification.streak > prevStreak.current) {
+      setStreakAnim(true);
+      setTimeout(() => setStreakAnim(false), 600);
+    }
+    prevStreak.current = gamification.streak;
+  }, [gamification.streak]);
+
+  return (
+    <header style={{
+      position: "sticky", top: 0, zIndex: 100,
+      background: "rgba(253,253,253,0.85)",
+      backdropFilter: "blur(20px)",
+      borderBottom: "1px solid rgba(0,0,0,0.06)",
+      padding: "0 24px",
+      height: 64,
+      display: "flex", alignItems: "center", justifyContent: "space-between",
+    }}>
+      <SunlogicLogo size={36} />
+
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        {/* Time */}
+        <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(79,172,254,0.1)", borderRadius: 10, padding: "6px 12px" }}>
+          <Clock size={14} color="#4FACFE" />
+          <span className="sora" style={{ fontSize: 13, fontWeight: 600, color: "#4FACFE" }}>{gamification.totalMinutes}p</span>
+        </div>
+
+        {/* Streak */}
+        <div className={streakAnim ? "streak-pop" : ""} style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255,81,47,0.1)", borderRadius: 10, padding: "6px 12px", cursor: "default" }}>
+          <span style={{ fontSize: 14 }}>🔥</span>
+          <span className="sora" style={{ fontSize: 13, fontWeight: 700, color: "#FF512F" }}>{gamification.streak}</span>
+        </div>
+
+        {/* Hearts */}
+        <div className="navbar-hide-sm" style={{ display: "flex", gap: 2, padding: "6px 10px", background: "rgba(239,68,68,0.06)", borderRadius: 10 }}>
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Heart
+              key={i}
+              size={15}
+              fill={i < gamification.hearts ? "#ef4444" : "transparent"}
+              color={i < gamification.hearts ? "#ef4444" : "#d1d5db"}
+            />
+          ))}
+        </div>
+
+        {/* Avatar */}
+        <div style={{
+          width: 36, height: 36, borderRadius: "50%",
+          background: "linear-gradient(135deg, #FF512F, #F09819)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          cursor: "pointer", marginLeft: 4,
+          color: "white", fontWeight: 700, fontSize: 13,
+          fontFamily: "Sora",
+        }} onClick={() => dispatch({ type: "LOGOUT" })}>
+          {user.email ? user.email[0].toUpperCase() : "U"}
+        </div>
+      </div>
+    </header>
+  );
+}
+
+// ─── POMODORO ─────────────────────────────────────────────────────────────────
 const POMODORO_SECONDS = 25 * 60;
-function PomodoroTimer({ onComplete }) {
-  const [seconds, setSeconds] = useState(POMODORO_SECONDS);
+
+function PomodoroTimer() {
+  const { dispatch } = useApp();
+  const [timeLeft, setTimeLeft] = useState(POMODORO_SECONDS);
   const [running, setRunning] = useState(false);
-  const ref = useRef(null);
+  const [completed, setCompleted] = useState(0);
+  const [showCelebrate, setShowCelebrate] = useState(false);
+  const intervalRef = useRef(null);
+  const audioRef = useRef(null);
+
+  const circumference = 2 * Math.PI * 54;
+  const progress = timeLeft / POMODORO_SECONDS;
+  const dashOffset = circumference * (1 - progress);
 
   useEffect(() => {
     if (running) {
-      ref.current = setInterval(() => {
-        setSeconds(s => {
-          if (s <= 1) { clearInterval(ref.current); setRunning(false); onComplete(); return 0; }
-          return s - 1;
+      intervalRef.current = setInterval(() => {
+        setTimeLeft(t => {
+          if (t <= 1) {
+            clearInterval(intervalRef.current);
+            setRunning(false);
+            setCompleted(c => c + 1);
+            setShowCelebrate(true);
+            dispatch({ type: "POMODORO_COMPLETE" });
+            try {
+              const ctx = new (window.AudioContext || window.webkitAudioContext)();
+              const osc = ctx.createOscillator();
+              const gain = ctx.createGain();
+              osc.connect(gain); gain.connect(ctx.destination);
+              osc.frequency.value = 880; gain.gain.value = 0.3;
+              osc.start(); osc.stop(ctx.currentTime + 0.3);
+              setTimeout(() => { osc.frequency.value = 1100; }, 100);
+            } catch {}
+            setTimeout(() => setShowCelebrate(false), 3000);
+            return 0;
+          }
+          return t - 1;
         });
       }, 1000);
-    } else clearInterval(ref.current);
-    return () => clearInterval(ref.current);
-  }, [running, onComplete]);
+    } else {
+      clearInterval(intervalRef.current);
+    }
+    return () => clearInterval(intervalRef.current);
+  }, [running]);
 
-  const mins = String(Math.floor(seconds / 60)).padStart(2, "0");
-  const secs = String(seconds % 60).padStart(2, "0");
-  const progress = 1 - seconds / POMODORO_SECONDS;
-  const R = 80, C = 2 * Math.PI * R;
-  const dash = C * (1 - progress);
+  const minutes = String(Math.floor(timeLeft / 60)).padStart(2, "0");
+  const seconds = String(timeLeft % 60).padStart(2, "0");
+
+  const reset = () => { setRunning(false); setTimeLeft(POMODORO_SECONDS); };
 
   return (
-    <div className="flex flex-col items-center gap-6">
-      <div className="relative" style={{width:200,height:200}}>
-        <svg width="200" height="200" style={{transform:"rotate(-90deg)"}}>
-          <defs>
-            <linearGradient id="pomGrad" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="#FF512F"/>
-              <stop offset="100%" stopColor="#F09819"/>
-            </linearGradient>
-          </defs>
-          <circle cx="100" cy="100" r={R} fill="none" stroke="#f0e6da" strokeWidth="10"/>
-          <circle cx="100" cy="100" r={R} fill="none" stroke="url(#pomGrad)" strokeWidth="10"
-            strokeDasharray={C} strokeDashoffset={dash} strokeLinecap="round"
-            style={{transition:"stroke-dashoffset 1s linear",filter:"drop-shadow(0 0 8px #FF512F88)"}}/>
-        </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span style={{fontFamily:"'Georgia',serif",fontSize:"42px",fontWeight:"700",background:"linear-gradient(135deg,#FF512F,#F09819)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>
-            {mins}:{secs}
-          </span>
-          <span style={{color:"#aaa",fontSize:"12px",letterSpacing:"2px"}}>POMODORO</span>
+    <div className="glass-dark" style={{ padding: 24 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+        <h3 className="sora" style={{ fontWeight: 700, fontSize: 15 }}>🍅 Pomodoro Timer</h3>
+        {completed > 0 && (
+          <div style={{ display: "flex", gap: 4 }}>
+            {Array.from({ length: completed }).map((_, i) => <span key={i} style={{ fontSize: 16 }}>🍅</span>)}
+          </div>
+        )}
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 20 }}>
+        {/* SVG Ring */}
+        <div style={{ position: "relative", width: 160, height: 160 }}>
+          <svg width="160" height="160" viewBox="0 0 120 120">
+            <defs>
+              <linearGradient id="pomGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#FF512F" />
+                <stop offset="100%" stopColor="#F09819" />
+              </linearGradient>
+            </defs>
+            <circle className="pomodoro-track" cx="60" cy="60" r="54" strokeWidth="8" />
+            <circle
+              className="pomodoro-ring pomodoro-progress"
+              cx="60" cy="60" r="54"
+              strokeWidth="8"
+              strokeDasharray={circumference}
+              strokeDashoffset={dashOffset}
+            />
+          </svg>
+          <div style={{
+            position: "absolute", inset: 0, display: "flex", flexDirection: "column",
+            alignItems: "center", justifyContent: "center"
+          }}>
+            <span className="sora" style={{ fontSize: 32, fontWeight: 800, color: running ? "#FF512F" : "#1a1a2e", letterSpacing: -1 }}>
+              {minutes}:{seconds}
+            </span>
+            <span style={{ fontSize: 10, color: "#aaa", marginTop: 2 }}>{running ? "Đang học..." : timeLeft === POMODORO_SECONDS ? "Sẵn sàng" : "Tạm dừng"}</span>
+          </div>
+        </div>
+
+        {/* Controls */}
+        <div style={{ display: "flex", gap: 12 }}>
+          <button
+            onClick={() => setRunning(r => !r)}
+            style={{
+              width: 52, height: 52, borderRadius: "50%",
+              background: running ? "rgba(255,81,47,0.1)" : "linear-gradient(135deg, #FF512F, #F09819)",
+              border: running ? "2px solid #FF512F" : "none",
+              cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+              transition: "all 0.2s", boxShadow: running ? "none" : "0 4px 16px rgba(255,81,47,0.4)",
+            }}
+          >
+            {running ? <Pause size={20} color="#FF512F" /> : <Play size={20} color="white" fill="white" />}
+          </button>
+          <button
+            onClick={reset}
+            style={{
+              width: 44, height: 44, borderRadius: "50%", marginTop: 4,
+              background: "rgba(0,0,0,0.05)", border: "none",
+              cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+              transition: "all 0.2s",
+            }}
+          >
+            <RotateCcw size={16} color="#888" />
+          </button>
         </div>
       </div>
-      <div className="flex gap-3">
-        {[
-          {label: running?"⏸ Dừng":"▶ Bắt đầu", action:()=>setRunning(r=>!r), primary:true},
-          {label:"↺ Reset", action:()=>{setRunning(false);setSeconds(POMODORO_SECONDS);}, primary:false},
-        ].map(btn=>(
-          <button key={btn.label} onClick={btn.action}
-            className="px-5 py-2 rounded-full text-sm font-semibold transition-all duration-200"
-            style={btn.primary?{
-              background:"linear-gradient(90deg,#FF512F,#F09819)",
-              color:"white", boxShadow:"0 4px 15px #FF512F44",
-              transform:"translateY(0)", border:"none"
-            }:{
-              background:"white", border:"1.5px solid #eee", color:"#666"
-            }}
-            onMouseEnter={e=>{ if(btn.primary) e.target.style.transform="translateY(-2px)"; }}
-            onMouseLeave={e=>{ if(btn.primary) e.target.style.transform="translateY(0)"; }}>
-            {btn.label}
-          </button>
-        ))}
-      </div>
+
+      {/* Celebration */}
+      {showCelebrate && (
+        <div className="slide-up" style={{
+          marginTop: 16, background: "linear-gradient(135deg, rgba(255,81,47,0.1), rgba(240,152,25,0.1))",
+          borderRadius: 12, padding: "10px 16px", textAlign: "center",
+          border: "1px solid rgba(255,81,47,0.2)"
+        }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: "#FF512F" }}>🎉 Hoàn thành 1 Pomodoro! +25 phút đã ghi nhận</span>
+        </div>
+      )}
     </div>
   );
 }
 
-/* ─── CHECKLIST ─── */
+// ─── CHECKLIST ────────────────────────────────────────────────────────────────
 function Checklist() {
-  const [tasks, setTasks] = useState([
-    {id:1,text:"Ôn lý thuyết vi phân",done:false},
-    {id:2,text:"Làm 20 bài tập tích phân",done:true},
-  ]);
+  const { state, dispatch } = useApp();
   const [input, setInput] = useState("");
-  const [autoInput, setAutoInput] = useState("");
+  const [showSchedule, setShowSchedule] = useState(false);
+  const [schedInput, setSchedInput] = useState({ subject: "", days: "" });
 
   const addTask = () => {
     if (!input.trim()) return;
-    setTasks(t=>[...t,{id:Date.now(),text:input.trim(),done:false}]);
+    dispatch({ type: "ADD_TASK", title: input.trim() });
     setInput("");
   };
 
   const autoSchedule = () => {
-    const m = autoInput.match(/(\d+)\s*ngày/i);
-    const days = m ? parseInt(m[1]) : 5;
-    const newTasks = [
-      {id:Date.now()+1, text:`Ngày 1-${Math.floor(days*0.4)}: Ôn lý thuyết và công thức cơ bản`, done:false},
-      {id:Date.now()+2, text:`Ngày ${Math.floor(days*0.4)+1}-${days-1}: Luyện đề vận dụng cao`, done:false},
-      {id:Date.now()+3, text:`Ngày ${days}: Rà soát lỗi sai và tổng ôn`, done:false},
+    if (!schedInput.subject || !schedInput.days) return;
+    const days = parseInt(schedInput.days) || 5;
+    const half = Math.ceil(days / 2);
+    const q3 = Math.ceil(days * 0.8);
+    const tasks = [
+      { id: Date.now() + "a", title: `Ngày 1-${half}: Lý thuyết ${schedInput.subject}`, completed: false },
+      { id: Date.now() + "b", title: `Ngày ${half + 1}-${q3}: Luyện đề ${schedInput.subject}`, completed: false },
+      { id: Date.now() + "c", title: `Ngày ${q3 + 1}-${days}: Rà soát ${schedInput.subject}`, completed: false },
     ];
-    setTasks(t=>[...t,...newTasks]);
-    setAutoInput("");
+    dispatch({ type: "ADD_TASKS_BULK", tasks });
+    setShowSchedule(false);
+    setSchedInput({ subject: "", days: "" });
   };
 
+  const completed = state.tasks.filter(t => t.completed).length;
+  const total = state.tasks.length;
+
   return (
-    <div className="flex flex-col gap-4">
-      {/* manual add */}
-      <div className="flex gap-2">
-        <input value={input} onChange={e=>setInput(e.target.value)}
-          onKeyDown={e=>e.key==="Enter"&&addTask()}
-          placeholder="Thêm việc cần làm..."
-          className="flex-1 px-4 py-2 rounded-xl border border-gray-200 bg-white/60 text-sm outline-none focus:border-orange-300"
-          style={{backdropFilter:"blur(8px)"}}/>
-        <button onClick={addTask} className="px-4 py-2 rounded-xl text-white text-sm font-semibold"
-          style={{background:"linear-gradient(90deg,#FF512F,#F09819)"}}>+ Thêm</button>
+    <div className="glass-dark" style={{ padding: 24 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+        <div>
+          <h3 className="sora" style={{ fontWeight: 700, fontSize: 15 }}>📋 Task & Kế Hoạch</h3>
+          {total > 0 && <p style={{ fontSize: 11, color: "#aaa", marginTop: 2 }}>{completed}/{total} hoàn thành</p>}
+        </div>
+        <button
+          onClick={() => setShowSchedule(s => !s)}
+          style={{
+            background: "linear-gradient(135deg, rgba(79,172,254,0.15), rgba(0,242,254,0.15))",
+            border: "1px solid rgba(79,172,254,0.3)",
+            borderRadius: 10, padding: "6px 12px",
+            cursor: "pointer", fontSize: 11, fontWeight: 600, color: "#4FACFE"
+          }}
+        >
+          📅 Lập lịch tự động
+        </button>
       </div>
-      {/* auto schedule */}
-      <div className="flex gap-2">
-        <input value={autoInput} onChange={e=>setAutoInput(e.target.value)}
-          placeholder="Ôn thi Tích phân 12 trong 5 ngày tới..."
-          className="flex-1 px-4 py-2 rounded-xl border border-blue-200 bg-blue-50/60 text-sm outline-none focus:border-blue-400"
-          style={{backdropFilter:"blur(8px)"}}/>
-        <button onClick={autoSchedule}
-          className="px-4 py-2 rounded-xl text-white text-sm font-semibold whitespace-nowrap"
-          style={{background:"linear-gradient(90deg,#4FACFE,#00f2fe)"}}>🪄 Tự động</button>
+
+      {/* Progress bar */}
+      {total > 0 && (
+        <div style={{ height: 4, background: "rgba(0,0,0,0.05)", borderRadius: 2, marginBottom: 16, overflow: "hidden" }}>
+          <div style={{
+            height: "100%", borderRadius: 2,
+            background: "linear-gradient(90deg, #22C55E, #4ade80)",
+            width: `${(completed / total) * 100}%`,
+            transition: "width 0.5s ease"
+          }} />
+        </div>
+      )}
+
+      {/* Schedule popup */}
+      {showSchedule && (
+        <div className="slide-up" style={{ background: "rgba(79,172,254,0.05)", border: "1px solid rgba(79,172,254,0.2)", borderRadius: 14, padding: 16, marginBottom: 14 }}>
+          <p style={{ fontSize: 12, fontWeight: 600, color: "#4FACFE", marginBottom: 10 }}>📅 Lập kế hoạch ôn tập</p>
+          <input className="input-field" placeholder="Tên môn học (vd: Tích phân)" value={schedInput.subject}
+            onChange={e => setSchedInput(s => ({ ...s, subject: e.target.value }))}
+            style={{ marginBottom: 8, padding: "10px 14px", fontSize: 13 }} />
+          <input className="input-field" type="number" placeholder="Số ngày còn lại (vd: 5)"
+            value={schedInput.days} onChange={e => setSchedInput(s => ({ ...s, days: e.target.value }))}
+            style={{ marginBottom: 10, padding: "10px 14px", fontSize: 13 }} />
+          <div style={{ display: "flex", gap: 8 }}>
+            <button className="btn-primary" onClick={autoSchedule} style={{ flex: 1, padding: "8px", fontSize: 12 }}>Tạo lịch</button>
+            <button className="btn-ghost" onClick={() => setShowSchedule(false)} style={{ padding: "8px 12px", fontSize: 12 }}>Huỷ</button>
+          </div>
+        </div>
+      )}
+
+      {/* Add task */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+        <input
+          className="input-field" placeholder="Thêm task mới..."
+          value={input} onChange={e => setInput(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && addTask()}
+          style={{ padding: "10px 14px", fontSize: 13 }}
+        />
+        <button onClick={addTask} style={{
+          width: 40, height: 40, borderRadius: 10, flexShrink: 0,
+          background: "linear-gradient(135deg, #FF512F, #F09819)",
+          border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          <Plus size={18} color="white" />
+        </button>
       </div>
-      {/* task list */}
-      <div className="flex flex-col gap-2 max-h-48 overflow-y-auto pr-1">
-        {tasks.map(t=>(
-          <div key={t.id} onClick={()=>setTasks(ts=>ts.map(x=>x.id===t.id?{...x,done:!x.done}:x))}
-            className="flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-300"
-            style={{background:t.done?"rgba(74,222,128,0.1)":"white",border:`1.5px solid ${t.done?"#4ade80":"#eee"}`,
-              opacity:t.done?0.6:1}}>
-            <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
-              style={{background:t.done?"#4ade80":"transparent",border:`2px solid ${t.done?"#4ade80":"#ddd"}`}}>
-              {t.done && <span style={{fontSize:"10px",color:"white"}}>✓</span>}
-            </div>
-            <span style={{fontSize:"13px",textDecoration:t.done?"line-through":"none",color:t.done?"#aaa":"#333"}}>{t.text}</span>
+
+      {/* Task list */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 240, overflowY: "auto" }}>
+        {state.tasks.length === 0 && (
+          <div style={{ textAlign: "center", padding: "20px 0", color: "#bbb", fontSize: 13 }}>Chưa có task nào. Thêm ngay!</div>
+        )}
+        {state.tasks.map((task, i) => (
+          <div key={task.id} className="slide-up" style={{
+            animationDelay: `${i * 0.05}s`,
+            display: "flex", alignItems: "center", gap: 10,
+            padding: "10px 12px", borderRadius: 12,
+            background: task.completed ? "rgba(34,197,94,0.06)" : "rgba(0,0,0,0.025)",
+            border: `1px solid ${task.completed ? "rgba(34,197,94,0.15)" : "rgba(0,0,0,0.04)"}`,
+            transition: "all 0.3s ease"
+          }}>
+            <button
+              onClick={() => dispatch({ type: "TOGGLE_TASK", id: task.id })}
+              style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", flexShrink: 0 }}
+            >
+              {task.completed
+                ? <CheckCircle size={18} color="#22C55E" fill="rgba(34,197,94,0.2)" />
+                : <Circle size={18} color="#d1d5db" />}
+            </button>
+            <span style={{
+              flex: 1, fontSize: 13,
+              textDecoration: task.completed ? "line-through" : "none",
+              opacity: task.completed ? 0.5 : 1,
+              transition: "all 0.3s"
+            }}>{task.title}</span>
+            <button onClick={() => dispatch({ type: "DELETE_TASK", id: task.id })}
+              style={{ background: "none", border: "none", cursor: "pointer", padding: 0, opacity: 0.3, display: "flex" }}>
+              <X size={14} color="#666" />
+            </button>
           </div>
         ))}
       </div>
@@ -236,443 +791,317 @@ function Checklist() {
   );
 }
 
-/* ─── AI CHAT ─── */
-const CHAT_FLOW = [
-  {role:"user", text:"Làm sao tính nhanh bài tập Tích phân từng phần của lớp 12 này?"},
-  {role:"ai", text:"Thay vì dùng công thức ∫u dv dài dòng, bạn đã thử dùng phương pháp 'Múa cột' (Kẻ bảng) chưa? Cột 1 bạn đặt u là đa thức, cột 2 đặt dv là lượng giác/mũ nhé. Bạn thử kẻ bảng nháp xem sao! 📝"},
+// ─── AI TUTOR ─────────────────────────────────────────────────────────────────
+const AI_RESPONSE = `Chào bạn! Thay vì dùng công thức ∫u dv dài dòng, bạn đã thử dùng phương pháp **Kẻ bảng (Múa cột)** chưa? Cột 1 đặt u là đa thức, cột 2 đặt dv là lượng giác/mũ. Thử kẻ bảng ra nháp rồi cho tôi biết kết quả bước 1 nhé!`;
+
+const MATH_KEYWORDS = ["tính", "toán", "tích phân", "đạo hàm", "giới hạn", "phương trình", "hàm số", "12"];
+
+const DEFAULT_RESPONSES = [
+  "Câu hỏi hay đấy! Bạn đã thử tìm kiếm thêm thông tin từ sách giáo khoa chưa? Hãy chia sẻ cụ thể hơn để tôi hỗ trợ tốt hơn nhé!",
+  "Trước khi tôi giải thích, bạn nghĩ nguyên nhân có thể là gì? Hãy thử suy luận từ những gì bạn đã biết!",
+  "Rất thú vị! Phương pháp Socratic cho rằng: hiểu sâu hơn khi tự khám phá. Bạn có thể mô tả những gì bạn đã biết về chủ đề này không?",
 ];
-function AIChat() {
-  const [open, setOpen] = useState(false);
+
+function TypewriterText({ text, speed = 20 }) {
+  const [displayed, setDisplayed] = useState("");
+  const [done, setDone] = useState(false);
+  useEffect(() => {
+    setDisplayed(""); setDone(false);
+    let i = 0;
+    const interval = setInterval(() => {
+      i++;
+      setDisplayed(text.slice(0, i));
+      if (i >= text.length) { clearInterval(interval); setDone(true); }
+    }, speed);
+    return () => clearInterval(interval);
+  }, [text]);
+  return <span>{displayed}{!done && <span className="cursor" />}</span>;
+}
+
+function AITutor() {
   const [messages, setMessages] = useState([
-    {role:"ai", text:"Xin chào! Tôi là Sunlogic AI — gia sư Socratic của bạn. Tôi sẽ hướng dẫn bạn tư duy thay vì chỉ đưa đáp án. Hỏi tôi bất cứ điều gì nhé! 🌟"}
+    { role: "ai", text: "Xin chào! Tôi là AI Tutor của Sunlogic 🤖 Tôi sẽ hướng dẫn bạn theo phương pháp Socratic - thay vì cho câu trả lời ngay, tôi sẽ đặt câu hỏi để bạn tự khám phá. Bạn đang học chủ đề gì?", fresh: false },
   ]);
   const [input, setInput] = useState("");
-  const [flowIdx, setFlowIdx] = useState(0);
-  const bottomRef = useRef(null);
+  const [typing, setTyping] = useState(false);
+  const endRef = useRef(null);
 
-  useEffect(() => { bottomRef.current?.scrollIntoView({behavior:"smooth"}); }, [messages]);
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
   const send = () => {
-    const txt = input.trim(); if (!txt) return;
-    setMessages(m=>[...m,{role:"user",text:txt}]);
+    if (!input.trim() || typing) return;
+    const userMsg = input.trim();
     setInput("");
-    const next = CHAT_FLOW[flowIdx];
-    if (next) {
-      setTimeout(()=>{
-        setMessages(m=>[...m,{role:"ai",text:CHAT_FLOW[Math.min(flowIdx+1,CHAT_FLOW.length-1)].text}]);
-        setFlowIdx(i=>Math.min(i+2,CHAT_FLOW.length));
-      }, 900);
-    } else {
-      setTimeout(()=>setMessages(m=>[...m,{role:"ai",text:"Câu hỏi hay đó! Bạn có thể chia sẻ thêm chi tiết để tôi hướng dẫn chính xác hơn không? 🤔"}]),900);
-    }
+    setMessages(m => [...m, { role: "user", text: userMsg }]);
+    setTyping(true);
+    const isMath = MATH_KEYWORDS.some(kw => userMsg.toLowerCase().includes(kw));
+    setTimeout(() => {
+      setTyping(false);
+      const reply = isMath ? AI_RESPONSE : DEFAULT_RESPONSES[Math.floor(Math.random() * DEFAULT_RESPONSES.length)];
+      setMessages(m => [...m, { role: "ai", text: reply, fresh: true }]);
+    }, 1200);
   };
 
   return (
-    <>
-      {/* floating btn */}
-      <button onClick={()=>setOpen(o=>!o)}
-        className="fixed bottom-6 right-6 w-14 h-14 rounded-full flex items-center justify-center z-30 shadow-lg transition-all duration-300"
-        style={{background:"linear-gradient(135deg,#4FACFE,#00f2fe)",boxShadow:"0 6px 20px #4FACFE66",
-          transform:open?"rotate(45deg)":"rotate(0deg)"}}>
-        <span style={{fontSize:"24px"}}>{open?"✕":"🤖"}</span>
-      </button>
-      {/* chat panel */}
-      {open && (
-        <div className="fixed bottom-24 right-6 w-80 rounded-2xl z-30 overflow-hidden flex flex-col"
-          style={{height:"420px",background:"rgba(255,255,255,0.85)",backdropFilter:"blur(20px)",
-            boxShadow:"0 20px 60px rgba(79,172,254,0.25)",border:"1px solid rgba(255,255,255,0.6)"}}>
-          <div className="p-4 flex items-center gap-3" style={{background:"linear-gradient(90deg,#4FACFE,#00f2fe)"}}>
-            <span style={{fontSize:"20px"}}>🤖</span>
-            <div>
-              <p style={{color:"white",fontWeight:"700",fontSize:"14px"}}>Sunlogic AI</p>
-              <p style={{color:"rgba(255,255,255,0.8)",fontSize:"11px"}}>Gia sư Socratic • Luôn trực tuyến</p>
-            </div>
-            <div className="ml-auto w-2 h-2 rounded-full bg-green-300" style={{boxShadow:"0 0 6px #4ade80"}}/>
-          </div>
-          <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2">
-            {messages.map((m,i)=>(
-              <div key={i} className={`flex ${m.role==="user"?"justify-end":"justify-start"}`}>
-                <div className="max-w-[85%] px-3 py-2 rounded-2xl text-sm"
-                  style={m.role==="user"?{
-                    background:"linear-gradient(135deg,#FF512F,#F09819)",color:"white",borderBottomRightRadius:"4px"
-                  }:{
-                    background:"rgba(79,172,254,0.1)",color:"#333",border:"1px solid rgba(79,172,254,0.2)",borderBottomLeftRadius:"4px"
-                  }}>
-                  {m.text}
-                </div>
-              </div>
-            ))}
-            <div ref={bottomRef}/>
-          </div>
-          <div className="p-3 border-t border-gray-100 flex gap-2">
-            <input value={input} onChange={e=>setInput(e.target.value)}
-              onKeyDown={e=>e.key==="Enter"&&send()}
-              placeholder="Hỏi Sunlogic AI..."
-              className="flex-1 px-3 py-2 rounded-xl text-sm outline-none"
-              style={{background:"rgba(79,172,254,0.08)",border:"1px solid rgba(79,172,254,0.2)"}}/>
-            <button onClick={send} className="px-3 py-2 rounded-xl text-white text-sm font-bold"
-              style={{background:"linear-gradient(90deg,#4FACFE,#00f2fe)"}}>→</button>
-          </div>
+    <div className="glass-dark" style={{ padding: 24, display: "flex", flexDirection: "column", height: 360 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+        <div style={{ width: 32, height: 32, borderRadius: "50%", background: "linear-gradient(135deg, #4FACFE, #00F2FE)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <Brain size={16} color="white" />
         </div>
-      )}
+        <div>
+          <h3 className="sora" style={{ fontWeight: 700, fontSize: 14 }}>AI Tutor Socratic</h3>
+          <p style={{ fontSize: 11, color: "#4FACFE" }}>● Đang trực tuyến</p>
+        </div>
+      </div>
+
+      {/* Messages */}
+      <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 10, paddingRight: 4 }}>
+        {messages.map((msg, i) => (
+          <div key={i} style={{ display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start" }}>
+            <div style={{
+              maxWidth: "82%", padding: "10px 14px", borderRadius: msg.role === "user" ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
+              background: msg.role === "user"
+                ? "linear-gradient(135deg, #FF512F, #F09819)"
+                : "rgba(79,172,254,0.08)",
+              border: msg.role === "ai" ? "1px solid rgba(79,172,254,0.15)" : "none",
+              color: msg.role === "user" ? "white" : "#1a1a2e",
+              fontSize: 13, lineHeight: 1.6,
+            }}>
+              {msg.fresh ? <TypewriterText text={msg.text} /> : msg.text}
+            </div>
+          </div>
+        ))}
+        {typing && (
+          <div style={{ display: "flex", gap: 5, padding: "12px 16px", background: "rgba(79,172,254,0.08)", borderRadius: "14px 14px 14px 4px", width: "fit-content", border: "1px solid rgba(79,172,254,0.15)" }}>
+            {[0,1,2].map(i => <div key={i} className="typing-dot" style={{ width: 6, height: 6, borderRadius: "50%", background: "#4FACFE" }} />)}
+          </div>
+        )}
+        <div ref={endRef} />
+      </div>
+
+      {/* Input */}
+      <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+        <input
+          className="input-field" placeholder="Hỏi về tích phân, toán 12..."
+          value={input} onChange={e => setInput(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && send()}
+          style={{ padding: "10px 14px", fontSize: 13 }}
+        />
+        <button onClick={send} disabled={typing || !input.trim()} style={{
+          width: 40, height: 40, borderRadius: 10, flexShrink: 0,
+          background: "linear-gradient(135deg, #4FACFE, #00F2FE)",
+          border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+          opacity: typing || !input.trim() ? 0.5 : 1,
+        }}>
+          <Send size={16} color="white" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── COMMUNITY ────────────────────────────────────────────────────────────────
+function EmojiParticle({ x, emoji, onDone }) {
+  useEffect(() => { const t = setTimeout(onDone, 3000); return () => clearTimeout(t); }, []);
+  return (
+    <div className="emoji-float" style={{ left: x, bottom: 60, animationDuration: `${2 + Math.random()}s`, animationDelay: `${Math.random() * 0.5}s` }}>
+      {emoji}
+    </div>
+  );
+}
+
+function Community() {
+  const [tab, setTab] = useState("costudy");
+  const [particles, setParticles] = useState([]);
+  const [upvotes, setUpvotes] = useState(145);
+  const [upvoted, setUpvoted] = useState(false);
+  const [studyCount] = useState(1204);
+
+  const launchEmojis = () => {
+    const emojis = ["🔥", "❤️", "⭐", "💪", "🎉", "✨"];
+    const newParticles = Array.from({ length: 8 }, (_, i) => ({
+      id: Date.now() + i,
+      x: 50 + Math.random() * (window.innerWidth - 100),
+      emoji: emojis[Math.floor(Math.random() * emojis.length)],
+    }));
+    setParticles(p => [...p, ...newParticles]);
+  };
+
+  const removeParticle = (id) => setParticles(p => p.filter(pp => pp.id !== id));
+
+  return (
+    <>
+      {particles.map(p => <EmojiParticle key={p.id} x={p.x} emoji={p.emoji} onDone={() => removeParticle(p.id)} />)}
+
+      <div className="glass-dark" style={{ padding: 24 }}>
+        <div style={{ display: "flex", gap: 0, marginBottom: 20, background: "rgba(0,0,0,0.04)", borderRadius: 12, padding: 4 }}>
+          {[["costudy", "👥 Co-Study"], ["qa", "💬 Q&A"]].map(([key, label]) => (
+            <button key={key} onClick={() => setTab(key)} style={{
+              flex: 1, padding: "8px 12px", border: "none", borderRadius: 10,
+              background: tab === key ? "white" : "transparent",
+              boxShadow: tab === key ? "0 2px 8px rgba(0,0,0,0.08)" : "none",
+              cursor: "pointer", fontSize: 13, fontWeight: tab === key ? 600 : 400,
+              color: tab === key ? "#1a1a2e" : "#888", transition: "all 0.2s"
+            }}>{label}</button>
+          ))}
+        </div>
+
+        {tab === "costudy" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div style={{ textAlign: "center", padding: "12px 0" }}>
+              <div style={{ display: "flex", justifyContent: "center", gap: -8, marginBottom: 8 }}>
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} style={{ width: 28, height: 28, borderRadius: "50%", border: "2px solid white", marginLeft: i > 0 ? -8 : 0, background: `hsl(${i * 45 + 200}, 70%, 60%)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "white", fontWeight: 700 }}>
+                    {["A", "B", "C", "D", "E"][i]}
+                  </div>
+                ))}
+              </div>
+              <div className="sora" style={{ fontSize: 28, fontWeight: 800, color: "#FF512F" }}>
+                {studyCount.toLocaleString()}
+              </div>
+              <p style={{ color: "#888", fontSize: 12 }}>người đang học cùng lúc này</p>
+            </div>
+
+            <div style={{ background: "linear-gradient(135deg, rgba(255,81,47,0.05), rgba(240,152,25,0.05))", borderRadius: 14, padding: 14, border: "1px solid rgba(255,81,47,0.1)" }}>
+              <p style={{ fontSize: 12, color: "#888", textAlign: "center", marginBottom: 8 }}>📊 Đang hot trong cộng đồng</p>
+              {[["Toán 12 - Tích phân", "324 người"], ["Vật lý - Điện xoay chiều", "218 người"], ["Hóa hữu cơ", "176 người"]].map(([subject, count]) => (
+                <div key={subject} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderTop: "1px solid rgba(0,0,0,0.04)" }}>
+                  <span style={{ fontSize: 12, color: "#555" }}>📚 {subject}</span>
+                  <span style={{ fontSize: 11, color: "#4FACFE", fontWeight: 600 }}>{count}</span>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={launchEmojis}
+              className="btn-primary"
+              style={{ width: "100%", fontSize: 14, padding: "13px" }}
+            >
+              🎉 Cổ Vũ Cộng Đồng!
+            </button>
+          </div>
+        )}
+
+        {tab === "qa" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {/* Question card */}
+            <div style={{ background: "rgba(0,0,0,0.02)", borderRadius: 14, padding: 14, border: "1px solid rgba(0,0,0,0.05)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                <div style={{ width: 28, height: 28, borderRadius: "50%", background: "linear-gradient(135deg, #667eea, #764ba2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <span style={{ fontSize: 11, color: "white", fontWeight: 700 }}>TN</span>
+                </div>
+                <div>
+                  <span style={{ fontSize: 12, fontWeight: 600 }}>Trần Nam</span>
+                  <span style={{ fontSize: 10, color: "#aaa", marginLeft: 6 }}>2 giờ trước</span>
+                </div>
+                <span style={{ marginLeft: "auto", background: "rgba(79,172,254,0.1)", color: "#4FACFE", fontSize: 10, fontWeight: 600, borderRadius: 6, padding: "2px 8px" }}>Toán 12</span>
+              </div>
+              <p style={{ fontSize: 13, fontWeight: 600, color: "#1a1a2e", marginBottom: 8 }}>Xin mẹo nhớ công thức phương trình mặt phẳng Oxyz</p>
+              <p style={{ fontSize: 12, color: "#888", lineHeight: 1.6 }}>Mình cứ nhầm giữa phương trình mặt phẳng đi qua 3 điểm và phương trình theo vectơ pháp tuyến. Có mẹo gì không ạ?</p>
+
+              {/* Verified answer */}
+              <div style={{ marginTop: 12, background: "rgba(34,197,94,0.05)", border: "1.5px solid rgba(34,197,94,0.25)", borderRadius: 12, padding: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                  <CheckCircle size={14} color="#22C55E" fill="rgba(34,197,94,0.15)" />
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "#22C55E" }}>Câu trả lời đã được xác minh</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                  <div style={{ width: 24, height: 24, borderRadius: "50%", background: "linear-gradient(135deg, #22C55E, #4ade80)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <span style={{ fontSize: 9, color: "white", fontWeight: 700 }}>GV</span>
+                  </div>
+                  <span style={{ fontSize: 11, fontWeight: 600 }}>Giáo viên Sunlogic</span>
+                  <Award size={12} color="#F09819" />
+                </div>
+                <p style={{ fontSize: 12, color: "#555", lineHeight: 1.7 }}>
+                  Mẹo nhớ: Mặt phẳng <strong>LUÔN cần vectơ pháp tuyến n⃗(A,B,C)</strong>. Công thức là A(x-x₀)+B(y-y₀)+C(z-z₀)=0. Từ 3 điểm, lấy 2 vectơ trong mặt phẳng rồi tính tích có hướng để ra n⃗. Nhớ chữ "pháp tuyến" = vuông góc với mặt phẳng!
+                </p>
+              </div>
+
+              {/* Upvote */}
+              <div style={{ display: "flex", gap: 10, marginTop: 12, alignItems: "center" }}>
+                <button
+                  onClick={() => { if (!upvoted) { setUpvotes(v => v + 1); setUpvoted(true); } }}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 5, padding: "5px 12px",
+                    background: upvoted ? "rgba(255,81,47,0.1)" : "rgba(0,0,0,0.04)",
+                    border: `1px solid ${upvoted ? "rgba(255,81,47,0.3)" : "rgba(0,0,0,0.06)"}`,
+                    borderRadius: 8, cursor: "pointer", transition: "all 0.2s"
+                  }}
+                >
+                  <ThumbsUp size={12} color={upvoted ? "#FF512F" : "#888"} fill={upvoted ? "rgba(255,81,47,0.3)" : "transparent"} />
+                  <span style={{ fontSize: 12, fontWeight: 600, color: upvoted ? "#FF512F" : "#888" }}>{upvotes}</span>
+                </button>
+                <span style={{ fontSize: 11, color: "#bbb" }}>32 bình luận</span>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </>
   );
 }
 
-/* ─── COMMUNITY ─── */
-function Community() {
-  const [tab, setTab] = useState("room");
-  const [cheering, setCheering] = useState(false);
-  const [floatActive, setFloatActive] = useState(false);
-  const [count, setCount] = useState(1204);
-
-  const cheer = () => {
-    setFloatActive(true);
-    setCount(c=>c+1);
-    setCheering(true);
-    setTimeout(()=>setCheering(false),600);
-  };
-
+// ─── DASHBOARD ────────────────────────────────────────────────────────────────
+function Dashboard() {
   return (
-    <div>
-      <FloatingEmojis active={floatActive} onDone={()=>setFloatActive(false)}/>
-      <div className="flex gap-1 mb-4">
-        {[["room","🏠 Phòng Tự Học"],["forum","💬 Q&A Forum"]].map(([id,label])=>(
-          <button key={id} onClick={()=>setTab(id)}
-            className="px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200"
-            style={tab===id?{background:"linear-gradient(90deg,#FF512F,#F09819)",color:"white"}:
-              {background:"rgba(255,255,255,0.6)",color:"#666",border:"1px solid #eee"}}>
-            {label}
-          </button>
-        ))}
-      </div>
+    <div style={{ minHeight: "100vh", background: "#FDFDFD" }}>
+      {/* Background orbs */}
+      <div className="orb" style={{ width: 500, height: 500, background: "rgba(255,81,47,0.06)", top: "10%", right: "-15%" }} />
+      <div className="orb" style={{ width: 400, height: 400, background: "rgba(79,172,254,0.07)", top: "50%", left: "-12%", animationDelay: "4s" }} />
 
-      {tab==="room" && (
-        <div className="rounded-2xl p-6 flex flex-col items-center gap-4"
-          style={{background:"linear-gradient(135deg,rgba(79,172,254,0.08),rgba(0,242,254,0.05))",
-            border:"1.5px solid rgba(79,172,254,0.2)"}}>
-          <div className="flex items-center gap-3">
-            <div className="w-3 h-3 rounded-full bg-green-400" style={{boxShadow:"0 0 8px #4ade80",animation:"pulse 2s infinite"}}/>
-            <span style={{fontSize:"18px",fontWeight:"700",color:"#333"}}>
-              Đang có <span style={{background:"linear-gradient(90deg,#4FACFE,#00f2fe)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>{count.toLocaleString()}</span> bạn đang tập trung
-            </span>
+      <Navbar />
+
+      <main style={{ maxWidth: 1200, margin: "0 auto", padding: "28px 20px", position: "relative", zIndex: 1 }}>
+        {/* Welcome bar */}
+        <div className="glass" style={{ padding: "16px 24px", marginBottom: 24, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div>
+            <h2 className="sora" style={{ fontWeight: 700, fontSize: 18 }}>
+              Chào buổi {new Date().getHours() < 12 ? "sáng" : new Date().getHours() < 18 ? "chiều" : "tối"} ☀️
+            </h2>
+            <p style={{ fontSize: 13, color: "#888", marginTop: 2 }}>Mỗi phút học hôm nay là một bước gần hơn đến mục tiêu của bạn.</p>
           </div>
-          <p style={{color:"#888",fontSize:"13px"}}>Cùng nhau chinh phục mục tiêu hôm nay! 💪</p>
-          <button onClick={cheer}
-            className="px-8 py-3 rounded-full text-white font-bold text-base transition-all duration-200"
-            style={{
-              background:"linear-gradient(90deg,#FF512F,#F09819)",
-              boxShadow:cheering?"0 0 25px #FF512F":"0 6px 20px #FF512F44",
-              transform:cheering?"scale(1.1)":"scale(1)"
-            }}>
-            🔥 Cổ vũ mọi người!
-          </button>
-        </div>
-      )}
-
-      {tab==="forum" && (
-        <div className="rounded-2xl overflow-hidden" style={{border:"1.5px solid #eee"}}>
-          <div className="p-4" style={{background:"white"}}>
-            <div className="flex items-start justify-between gap-3 mb-3">
-              <h3 style={{fontWeight:"700",color:"#222",fontSize:"15px"}}>
-                📐 Xin mẹo nhớ các dạng phương trình mặt phẳng Oxyz
-              </h3>
-              <span className="px-2 py-1 rounded-full text-xs font-semibold flex-shrink-0"
-                style={{background:"rgba(255,81,47,0.1)",color:"#FF512F"}}>Oxyz</span>
-            </div>
-            <p style={{color:"#888",fontSize:"12px"}}>Đăng bởi <b>minhnguyen_2k7</b> • 3 giờ trước • 24 lượt xem</p>
-          </div>
-          <div className="p-4" style={{background:"rgba(79,172,254,0.04)",borderTop:"1px solid #eee"}}>
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-white text-sm font-bold"
-                style={{background:"linear-gradient(135deg,#4FACFE,#00f2fe)"}}>T</div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <span style={{fontWeight:"700",fontSize:"13px",color:"#333"}}>thanhtruc.math</span>
-                  {/* Best answer badge */}
-                  <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold"
-                    style={{background:"linear-gradient(90deg,#4FACFE,#00f2fe)",color:"white",
-                      boxShadow:"0 2px 8px #4FACFE88"}}>
-                    ✓ Câu trả lời hay nhất
-                  </span>
-                </div>
-                <p style={{color:"#444",fontSize:"13px",lineHeight:"1.6"}}>
-                  Mình có trick này: nhớ 4 dạng TCTC — <b>Tổng quát, Chính tắc, Tham số, Cắt trục</b>. Mỗi dạng có 1 từ khóa nhận dạng. Quan trọng nhất: véc-tơ pháp tuyến n⃗(A,B,C) là "linh hồn" của mặt phẳng, nhớ n⃗ là nhớ được hết! 🧠
-                </p>
-                <div className="flex items-center gap-3 mt-2">
-                  <button className="flex items-center gap-1 text-xs transition-colors"
-                    style={{color:"#4FACFE",fontWeight:"600"}}>
-                    👍 <span>47 Upvotes</span>
-                  </button>
-                  <button className="text-xs" style={{color:"#aaa"}}>Trả lời</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ─── AUTH SCREEN ─── */
-function AuthScreen({ onLogin }) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const valid = email.trim() && password.length >= 1;
-
-  const handleSubmit = () => {
-    if (!valid) return;
-    setLoading(true);
-    setTimeout(()=>{ setLoading(false); onLogin(); }, 1200);
-  };
-
-  return (
-    <div className="min-h-screen flex" style={{background:"#FDFDFD",fontFamily:"'Georgia',serif"}}>
-      {/* blobs */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div style={{position:"absolute",width:400,height:400,borderRadius:"50%",top:"-100px",left:"-80px",
-          background:"radial-gradient(circle,rgba(79,172,254,0.18),transparent 70%)",filter:"blur(60px)"}}/>
-        <div style={{position:"absolute",width:500,height:500,borderRadius:"50%",bottom:"-150px",right:"-100px",
-          background:"radial-gradient(circle,rgba(255,81,47,0.14),transparent 70%)",filter:"blur(80px)"}}/>
-        <div style={{position:"absolute",width:300,height:300,borderRadius:"50%",top:"40%",left:"40%",
-          background:"radial-gradient(circle,rgba(240,152,25,0.1),transparent 70%)",filter:"blur(50px)"}}/>
-      </div>
-
-      {/* Left half */}
-      <div className="hidden md:flex flex-1 flex-col justify-center items-center p-16 relative">
-        <div className="max-w-md">
-          <div className="mb-10"><SunlogicLogo size={52}/></div>
-          <div className="rounded-3xl p-8 relative overflow-hidden"
-            style={{background:"rgba(255,255,255,0.5)",backdropFilter:"blur(20px)",
-              border:"1.5px solid rgba(255,255,255,0.8)",boxShadow:"0 25px 60px rgba(79,172,254,0.12)"}}>
-            <div className="absolute top-0 left-0 right-0 h-1 rounded-t-3xl"
-              style={{background:"linear-gradient(90deg,#FF512F,#F09819,#4FACFE)"}}/>
-            <span style={{fontSize:"48px",display:"block",marginBottom:"20px"}}>🏔️</span>
-            <blockquote style={{fontStyle:"italic",lineHeight:"1.9",color:"#444",fontSize:"16px"}}>
-              "Học tập giống như leo núi. Nỗ lực mù quáng chỉ mang lại áp lực vô hình. Khi sự chăm chỉ được soi đường bởi{" "}
-              <span style={{background:"linear-gradient(90deg,#FF512F,#F09819)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",fontWeight:"700"}}>
-                phương pháp logic
-              </span>
-              , việc học sẽ trở về với bản chất nguyên thủy đẹp đẽ của nó."
-            </blockquote>
-            <p style={{marginTop:"16px",color:"#aaa",fontSize:"13px"}}>— Triết lý Sunlogic</p>
-          </div>
-          <div className="mt-8 flex gap-6">
-            {[["📚","15,000+","Học sinh"],["⭐","4.9","Đánh giá"],["🎯","92%","Đạt mục tiêu"]].map(([icon,num,label])=>(
-              <div key={label} className="flex flex-col items-center">
-                <span style={{fontSize:"20px"}}>{icon}</span>
-                <span style={{fontWeight:"800",fontSize:"18px",background:"linear-gradient(90deg,#FF512F,#F09819)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>{num}</span>
-                <span style={{color:"#aaa",fontSize:"11px"}}>{label}</span>
+          <div style={{ display: "flex", gap: 8 }}>
+            {["📖 Đang học", "🎯 Hôm nay", "📊 Tuần này"].map(label => (
+              <div key={label} style={{ background: "rgba(255,81,47,0.08)", borderRadius: 10, padding: "6px 12px", fontSize: 11, fontWeight: 600, color: "#FF512F", cursor: "pointer" }}>
+                {label}
               </div>
             ))}
           </div>
         </div>
-      </div>
 
-      {/* Right half - Auth form */}
-      <div className="flex-1 flex items-center justify-center p-8 md:p-16">
-        <div className="w-full max-w-sm">
-          <div className="md:hidden mb-8"><SunlogicLogo size={44}/></div>
-          <h2 style={{fontWeight:"800",fontSize:"28px",color:"#222",marginBottom:"8px"}}>Chào mừng trở lại 👋</h2>
-          <p style={{color:"#888",fontSize:"14px",marginBottom:"32px"}}>Tiếp tục hành trình học tập của bạn</p>
-
-          {/* Google btn */}
-          <button className="w-full flex items-center justify-center gap-3 py-3 rounded-2xl mb-4 transition-all duration-200"
-            style={{background:"white",border:"1.5px solid #eee",boxShadow:"0 2px 12px rgba(0,0,0,0.06)"}}
-            onMouseEnter={e=>e.currentTarget.style.boxShadow="0 4px 20px rgba(0,0,0,0.1)"}
-            onMouseLeave={e=>e.currentTarget.style.boxShadow="0 2px 12px rgba(0,0,0,0.06)"}>
-            <svg width="18" height="18" viewBox="0 0 18 18">
-              <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/>
-              <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z"/>
-              <path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/>
-              <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/>
-            </svg>
-            <span style={{color:"#444",fontSize:"14px",fontWeight:"600"}}>Tiếp tục với Google</span>
-          </button>
-
-          <div className="flex items-center gap-3 my-4">
-            <div className="flex-1 h-px bg-gray-200"/>
-            <span style={{color:"#bbb",fontSize:"12px"}}>hoặc</span>
-            <div className="flex-1 h-px bg-gray-200"/>
+        {/* Grid */}
+        <div className="dashboard-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+          {/* Left column */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            <PomodoroTimer />
+            <Checklist />
           </div>
-
-          {/* Email */}
-          <div className="mb-3">
-            <label style={{display:"block",fontSize:"12px",fontWeight:"600",color:"#666",marginBottom:"6px"}}>EMAIL</label>
-            <input value={email} onChange={e=>setEmail(e.target.value)} type="email"
-              placeholder="ten@email.com"
-              className="w-full px-4 py-3 rounded-2xl outline-none transition-all duration-200"
-              style={{background:"rgba(255,255,255,0.8)",border:`1.5px solid ${email?"#4FACFE":"#eee"}`,
-                fontSize:"14px",backdropFilter:"blur(8px)"}}/>
+          {/* Right column */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            <AITutor />
+            <Community />
           </div>
-          {/* Password */}
-          <div className="mb-6">
-            <label style={{display:"block",fontSize:"12px",fontWeight:"600",color:"#666",marginBottom:"6px"}}>MẬT KHẨU</label>
-            <input value={password} onChange={e=>setPassword(e.target.value)} type="password"
-              placeholder="••••••••"
-              className="w-full px-4 py-3 rounded-2xl outline-none transition-all duration-200"
-              style={{background:"rgba(255,255,255,0.8)",border:`1.5px solid ${password?"#4FACFE":"#eee"}`,
-                fontSize:"14px",backdropFilter:"blur(8px)"}}/>
-          </div>
-
-          <button onClick={handleSubmit} disabled={!valid}
-            className="w-full py-3 rounded-2xl text-white font-bold text-base transition-all duration-300"
-            style={{
-              background: valid?"linear-gradient(90deg,#FF512F,#F09819)":"#e5e7eb",
-              color: valid?"white":"#aaa",
-              boxShadow: valid?"0 6px 25px rgba(255,81,47,0.35)":"none",
-              cursor: valid?"pointer":"not-allowed",
-              transform: valid?"translateY(0)":"translateY(0)"
-            }}>
-            {loading?"Đang đăng nhập...":"🚀 Bắt đầu học ngay"}
-          </button>
-          <p className="text-center mt-4" style={{color:"#bbb",fontSize:"12px"}}>
-            Chưa có tài khoản? <span style={{color:"#4FACFE",cursor:"pointer",fontWeight:"600"}} onClick={onLogin}>Đăng ký miễn phí</span>
-          </p>
         </div>
-      </div>
+      </main>
     </div>
   );
 }
 
-/* ─── DASHBOARD ─── */
-function Dashboard({ onLogout }) {
-  const [streak, setStreak] = useState(0);
-  const [totalMinutes, setTotalMinutes] = useState(0);
-  const [hearts, setHearts] = useState(5);
-  const [confetti, setConfetti] = useState(false);
-  const [activeTab, setActiveTab] = useState("study");
-
-  const handlePomodoroComplete = useCallback(() => {
-    setTotalMinutes(m=>m+25);
-    setStreak(s=>s+1);
-    setConfetti(true);
-  }, []);
-
-  const formatTime = (mins) => {
-    if (mins < 60) return `${mins} phút`;
-    return `${Math.floor(mins/60)}g ${mins%60}p`;
-  };
-
-  const navItems = [
-    {id:"study",icon:"🍅",label:"Học tập"},
-    {id:"community",icon:"👥",label:"Cộng đồng"},
-  ];
-
+// ─── ROOT APP ─────────────────────────────────────────────────────────────────
+function AppInner() {
+  const { state } = useApp();
   return (
-    <div className="min-h-screen" style={{background:"#FDFDFD",fontFamily:"'Georgia',serif"}}>
-      <Confetti active={confetti} onDone={()=>setConfetti(false)}/>
-
-      {/* blobs */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div style={{position:"absolute",width:500,height:500,borderRadius:"50%",top:"-100px",right:"-100px",
-          background:"radial-gradient(circle,rgba(255,81,47,0.08),transparent 70%)",filter:"blur(80px)"}}/>
-        <div style={{position:"absolute",width:400,height:400,borderRadius:"50%",bottom:"0",left:"-80px",
-          background:"radial-gradient(circle,rgba(79,172,254,0.1),transparent 70%)",filter:"blur(60px)"}}/>
-      </div>
-
-      {/* HEADER */}
-      <header className="sticky top-0 z-20 px-6 py-3 flex items-center justify-between"
-        style={{background:"rgba(255,255,255,0.75)",backdropFilter:"blur(20px)",
-          borderBottom:"1px solid rgba(255,255,255,0.5)",boxShadow:"0 2px 20px rgba(0,0,0,0.04)"}}>
-        <SunlogicLogo size={38}/>
-        <div className="flex items-center gap-6">
-          {/* Streak */}
-          <div className="flex items-center gap-1.5">
-            <span style={{fontSize:"22px",filter:"drop-shadow(0 2px 4px rgba(255,100,0,0.4))"}}>🔥</span>
-            <div>
-              <span style={{fontWeight:"800",fontSize:"16px",background:"linear-gradient(90deg,#FF512F,#F09819)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>{streak}</span>
-              <span style={{fontSize:"10px",color:"#aaa",display:"block",lineHeight:"1"}}>ngày</span>
-            </div>
-          </div>
-          {/* Hearts */}
-          <div className="flex items-center gap-1">
-            {Array.from({length:5}).map((_,i)=>(
-              <span key={i} style={{
-                fontSize:"18px",filter:i<hearts?"drop-shadow(0 1px 3px rgba(255,50,50,0.5))":"grayscale(1) opacity(0.3)",
-                animation:i<hearts?"heartbeat 1.4s ease-in-out infinite":"none",
-                animationDelay:`${i*0.1}s`
-              }}>{i<hearts?"❤️":"🖤"}</span>
-            ))}
-          </div>
-          {/* Total time */}
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full"
-            style={{background:"rgba(79,172,254,0.1)",border:"1px solid rgba(79,172,254,0.2)"}}>
-            <span style={{fontSize:"14px"}}>⏱</span>
-            <span style={{fontSize:"13px",fontWeight:"700",color:"#4FACFE"}}>{formatTime(totalMinutes)}</span>
-          </div>
-          <button onClick={onLogout} style={{fontSize:"12px",color:"#bbb",cursor:"pointer",background:"none",border:"none"}}>Đăng xuất</button>
-        </div>
-      </header>
-
-      {/* MAIN */}
-      <div className="max-w-5xl mx-auto px-4 py-6">
-        {/* nav tabs */}
-        <div className="flex gap-2 mb-6">
-          {navItems.map(item=>(
-            <button key={item.id} onClick={()=>setActiveTab(item.id)}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition-all duration-200"
-              style={activeTab===item.id?{
-                background:"linear-gradient(90deg,#FF512F,#F09819)",color:"white",
-                boxShadow:"0 4px 15px rgba(255,81,47,0.3)"
-              }:{background:"rgba(255,255,255,0.7)",color:"#777",border:"1px solid #eee"}}>
-              {item.icon} {item.label}
-            </button>
-          ))}
-        </div>
-
-        {/* STUDY TAB */}
-        {activeTab==="study" && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Pomodoro card */}
-            <div className="rounded-3xl p-6" style={{
-              background:"rgba(255,255,255,0.7)",backdropFilter:"blur(20px)",
-              border:"1.5px solid rgba(255,255,255,0.9)",boxShadow:"0 8px 40px rgba(255,81,47,0.08)"}}>
-              <h2 style={{fontWeight:"800",color:"#222",marginBottom:"24px",fontSize:"17px"}}>🍅 Đồng hồ Pomodoro</h2>
-              <PomodoroTimer onComplete={handlePomodoroComplete}/>
-              {totalMinutes > 0 && (
-                <div className="mt-4 text-center text-sm font-semibold" style={{color:"#4ade80"}}>
-                  🎉 Đã học {formatTime(totalMinutes)} hôm nay!
-                </div>
-              )}
-            </div>
-
-            {/* Checklist card */}
-            <div className="rounded-3xl p-6" style={{
-              background:"rgba(255,255,255,0.7)",backdropFilter:"blur(20px)",
-              border:"1.5px solid rgba(255,255,255,0.9)",boxShadow:"0 8px 40px rgba(79,172,254,0.08)"}}>
-              <h2 style={{fontWeight:"800",color:"#222",marginBottom:"20px",fontSize:"17px"}}>📋 Kế hoạch & Checklist</h2>
-              <Checklist/>
-            </div>
-          </div>
-        )}
-
-        {/* COMMUNITY TAB */}
-        {activeTab==="community" && (
-          <div className="rounded-3xl p-6" style={{
-            background:"rgba(255,255,255,0.7)",backdropFilter:"blur(20px)",
-            border:"1.5px solid rgba(255,255,255,0.9)",boxShadow:"0 8px 40px rgba(0,0,0,0.05)"}}>
-            <Community/>
-          </div>
-        )}
-      </div>
-
-      <AIChat/>
-
-      <style>{`
-        @keyframes heartbeat { 0%,100%{transform:scale(1)} 14%{transform:scale(1.2)} 28%{transform:scale(1)} 42%{transform:scale(1.15)} 70%{transform:scale(1)} }
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
-      `}</style>
-    </div>
+    <>
+      <style>{globalCSS}</style>
+      {state.user.isAuthenticated ? <Dashboard /> : <LoginPage />}
+    </>
   );
 }
 
-/* ─── APP ROOT ─── */
 export default function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  return isLoggedIn
-    ? <Dashboard onLogout={()=>setIsLoggedIn(false)}/>
-    : <AuthScreen onLogin={()=>setIsLoggedIn(true)}/>;
+  return (
+    <AppProvider>
+      <AppInner />
+    </AppProvider>
+  );
 }
