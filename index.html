@@ -13,10 +13,8 @@
         
         /* Glassmorphism & Utilities */
         .glass-card {
-            background: rgba(255, 255, 255, 0.04);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.04); backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 20px;
         }
         .btn-primary {
             background: linear-gradient(135deg, #FF6B2B, #FFD60A);
@@ -36,18 +34,21 @@
         .nav-item:hover { background: rgba(255,255,255,0.06); color: #fff; }
         .nav-item.active { background: linear-gradient(135deg, rgba(255,107,43,0.2), rgba(255,214,10,0.1)); color: #FFD60A; border: 1px solid rgba(255,107,43,0.3); }
 
-        /* Scrollbar */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
 
-        /* Animations */
         .fade-in { animation: fadeIn 0.4s ease forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         
-        .chat-typing span { display: inline-block; width: 6px; height: 6px; background: #FF6B2B; border-radius: 50%; margin: 0 2px; animation: bounce 1.4s infinite ease-in-out both; }
-        .chat-typing span:nth-child(1) { animation-delay: -0.32s; }
-        .chat-typing span:nth-child(2) { animation-delay: -0.16s; }
-        @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+        /* Modal Overlay */
+        .modal-overlay { background: rgba(0,0,0,0.7); backdrop-filter: blur(5px); z-index: 100; }
+        
+        /* Quiz options */
+        .quiz-opt { border: 1px solid rgba(255,255,255,0.1); transition: all 0.2s; cursor: pointer; }
+        .quiz-opt:hover { background: rgba(255,255,255,0.1); }
+        .quiz-opt.selected { border-color: #FFD60A; background: rgba(255,214,10,0.1); }
+        .quiz-opt.correct { border-color: #00C864; background: rgba(0,200,100,0.2); }
+        .quiz-opt.wrong { border-color: #FF4444; background: rgba(255,68,68,0.2); }
     </style>
 </head>
 <body class="flex h-screen">
@@ -56,17 +57,24 @@
         <div class="hidden md:flex flex-1 flex-col justify-center p-12 relative overflow-hidden" style="background: linear-gradient(135deg, #0f0f1a, #1a0a05);">
             <div class="absolute w-96 h-96 bg-orange-500 rounded-full blur-[120px] opacity-20 -top-20 -left-20"></div>
             <h1 class="text-5xl font-extrabold mb-4 z-10"><span class="text-gradient">Sun</span>logic</h1>
-            <p class="text-xl text-gray-400 z-10 italic">"Học tập giống như leo núi. Khi được soi đường bởi logic, việc học sẽ trở về với bản chất nguyên thủy: Sự khai sáng."</p>
+            <p class="text-xl text-gray-400 z-10 italic">"Chỉ cần kiên trì mỗi ngày, kiến thức sẽ tích lũy thành đại dương."</p>
         </div>
         <div class="w-full md:w-[500px] flex items-center justify-center p-8 bg-[#0d0d18]">
             <div class="w-full max-w-sm">
                 <h2 class="text-3xl font-bold mb-2">Chào mừng 👋</h2>
                 <p class="text-gray-500 mb-8 text-sm">Chỉ cần nhập tên của bạn để bắt đầu</p>
-                
                 <input type="text" id="login-name" placeholder="Tên đăng nhập (VD: Hải Nam)" class="input-box mb-6 text-lg py-4" onkeypress="if(event.key==='Enter') handleLogin()">
-                
                 <button onclick="handleLogin()" class="btn-primary w-full py-4 text-lg">🚀 Vào không gian học tập</button>
             </div>
+        </div>
+    </div>
+
+    <div id="reward-modal" class="fixed inset-0 modal-overlay hidden flex items-center justify-center">
+        <div class="glass-card p-8 max-w-sm w-full text-center border-orange-500/50 shadow-[0_0_30px_rgba(255,107,43,0.3)] fade-in">
+            <div class="text-6xl mb-4">🎁</div>
+            <h2 class="text-2xl font-bold text-gradient mb-2">Quà Đăng Nhập!</h2>
+            <p class="text-gray-300 mb-6">Chào mừng bạn quay lại học tập. Bạn nhận được <b class="text-orange-400">50 Điểm thưởng</b> và <b class="text-orange-400">+1 Chuỗi ngày</b>!</p>
+            <button onclick="claimReward()" class="btn-primary w-full py-3 text-lg shadow-lg">Nhận quà ngay</button>
         </div>
     </div>
 
@@ -83,16 +91,18 @@
             <div class="glass-card p-4 mb-6 text-center">
                 <div id="user-avatar" class="w-12 h-12 rounded-full bg-gradient-to-br from-orange-500 to-yellow-500 mx-auto flex items-center justify-center text-xl font-bold mb-2">A</div>
                 <div id="user-name" class="font-bold text-sm">Học sinh</div>
-                <div class="mt-2 text-sm flex items-center justify-center gap-1">
-                    🔥 <span id="sidebar-streak" class="text-orange-500 font-bold">0</span> ngày
+                <div class="mt-2 text-sm flex items-center justify-center gap-2">
+                    🔥 <span id="sidebar-streak" class="text-orange-500 font-bold">0</span> 
+                    | 🌟 <span id="sidebar-points" class="text-yellow-400 font-bold">0</span>
                 </div>
             </div>
 
             <nav class="flex-1 flex flex-col gap-2">
-                <div class="nav-item active" onclick="switchTab('dashboard', this)"><i class="fa-solid fa-house w-5"></i> Dashboard</div>
-                <div class="nav-item" onclick="switchTab('tools', this)"><i class="fa-solid fa-stopwatch w-5"></i> Công cụ (Pomodoro)</div>
-                <div class="nav-item" onclick="switchTab('ai', this)"><i class="fa-solid fa-robot w-5"></i> Trợ lý AI Tutor</div>
-                <div class="nav-item" onclick="switchTab('community', this)"><i class="fa-solid fa-users w-5"></i> Diễn đàn Hỏi-Đáp</div>
+                <div class="nav-item active" onclick="switchTab('dashboard', this)"><i class="fa-solid fa-house w-5"></i> Tổng quan</div>
+                <div class="nav-item" onclick="switchTab('quiz', this)"><i class="fa-solid fa-file-pen w-5"></i> Làm bài kiểm tra</div>
+                <div class="nav-item" onclick="switchTab('tools', this)"><i class="fa-solid fa-stopwatch w-5"></i> Bộ hẹn giờ</div>
+                <div class="nav-item" onclick="switchTab('ai', this)"><i class="fa-solid fa-robot w-5"></i> Trợ lý AI</div>
+                <div class="nav-item" onclick="switchTab('community', this)"><i class="fa-solid fa-users w-5"></i> Cộng đồng</div>
             </nav>
 
             <button onclick="handleLogout()" class="mt-auto p-3 rounded-xl bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition font-semibold text-sm">🚪 Đăng xuất</button>
@@ -104,45 +114,67 @@
                 <h1 class="text-3xl font-bold mb-6">Tổng quan học tập 🌟</h1>
                 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <div class="glass-card p-6 flex items-center justify-between">
-                        <div>
-                            <div class="text-gray-400 text-sm font-semibold mb-1">Chuỗi ngày (Streak)</div>
-                            <div class="text-3xl font-bold text-orange-500 flex items-center gap-2"><span id="dash-streak">0</span> 🔥</div>
-                        </div>
+                    <div class="glass-card p-6">
+                        <div class="text-gray-400 text-sm font-semibold mb-1">Chuỗi ngày (Streak)</div>
+                        <div class="text-3xl font-bold text-orange-500 flex items-center gap-2"><span id="dash-streak">0</span> 🔥</div>
                     </div>
-                    <div class="glass-card p-6 flex items-center justify-between">
-                        <div>
-                            <div class="text-gray-400 text-sm font-semibold mb-1">Phiên Pomodoro</div>
-                            <div class="text-3xl font-bold text-pink-500 flex items-center gap-2"><span id="dash-pomodoro">0</span> 🍅</div>
-                        </div>
+                    <div class="glass-card p-6">
+                        <div class="text-gray-400 text-sm font-semibold mb-1">Điểm tích lũy</div>
+                        <div class="text-3xl font-bold text-yellow-400 flex items-center gap-2"><span id="dash-points">0</span> 🌟</div>
                     </div>
-                    <div class="glass-card p-6 flex items-center justify-between">
-                        <div>
-                            <div class="text-gray-400 text-sm font-semibold mb-1">Sinh mệnh</div>
-                            <div id="dash-hearts" class="text-2xl mt-2">❤️❤️❤️❤️❤️</div>
-                        </div>
+                    <div class="glass-card p-6">
+                        <div class="text-gray-400 text-sm font-semibold mb-1">Sinh mệnh</div>
+                        <div id="dash-hearts" class="text-2xl mt-2">❤️❤️❤️❤️❤️</div>
                     </div>
                 </div>
 
-                <div class="glass-card p-8">
-                    <h2 class="text-xl font-bold mb-4">Nhiệm vụ hàng ngày</h2>
-                    <div class="flex gap-4 mb-4">
-                        <input type="text" id="task-input" placeholder="Nhập mục tiêu hôm nay..." class="input-box" onkeypress="if(event.key==='Enter') addTask()">
-                        <button onclick="addTask()" class="btn-primary px-6">Thêm</button>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="glass-card p-8">
+                        <h2 class="text-xl font-bold mb-4 text-orange-400"><i class="fa-solid fa-trophy"></i> Bảng xếp hạng Tuần</h2>
+                        <div id="leaderboard-list" class="flex flex-col gap-3">
+                            </div>
                     </div>
-                    <ul id="task-list" class="space-y-3"></ul>
+
+                    <div class="glass-card p-8">
+                        <h2 class="text-xl font-bold mb-4">Nhiệm vụ cá nhân</h2>
+                        <div class="flex gap-2 mb-4">
+                            <input type="text" id="task-input" placeholder="Mục tiêu mới..." class="input-box text-sm" onkeypress="if(event.key==='Enter') addTask()">
+                            <button onclick="addTask()" class="btn-primary px-4 text-sm">Thêm</button>
+                        </div>
+                        <ul id="task-list" class="space-y-3"></ul>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-quiz" class="tab-content hidden fade-in">
+                <h1 class="text-3xl font-bold mb-6">Luyện tập & Kiểm tra 📝</h1>
+                
+                <div id="quiz-list-view">
+                    <p class="text-gray-400 mb-6">Chọn một bài kiểm tra để tích lũy điểm thưởng nhé!</p>
+                    <div id="quiz-cards" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        </div>
+                </div>
+
+                <div id="quiz-active-view" class="hidden max-w-2xl mx-auto glass-card p-8">
+                    <div class="flex justify-between items-center border-b border-white/10 pb-4 mb-6">
+                        <h2 id="active-quiz-title" class="text-xl font-bold text-orange-400">Đề Toán</h2>
+                        <button onclick="closeQuiz()" class="text-gray-500 hover:text-white">✕ Đóng</button>
+                    </div>
+                    <div id="quiz-questions-container" class="space-y-8">
+                        </div>
+                    <div id="quiz-submit-zone" class="mt-8 pt-6 border-t border-white/10 text-center">
+                        <button onclick="submitQuiz()" class="btn-primary py-3 px-8 text-lg w-full">Nộp Bài Ngay</button>
+                    </div>
                 </div>
             </div>
 
             <div id="tab-tools" class="tab-content hidden fade-in text-center pt-10">
                 <h1 class="text-3xl font-bold mb-2">Đồng hồ Pomodoro 🍅</h1>
                 <p class="text-gray-400 mb-10">Tập trung cao độ - Nâng cao hiệu suất</p>
-
                 <div class="glass-card inline-block p-12 rounded-full border-4 border-orange-500/30 relative">
                     <div id="timer-display" class="text-7xl font-black tabular-nums tracking-tighter text-gradient">25:00</div>
                     <div id="timer-status" class="absolute bottom-6 left-0 right-0 text-gray-400 text-sm uppercase tracking-widest font-bold">Sẵn sàng</div>
                 </div>
-
                 <div class="flex justify-center gap-4 mt-12">
                     <button id="btn-pom-start" onclick="startPomodoro()" class="btn-primary py-3 px-8 text-lg w-40">▶ Bắt đầu</button>
                     <button onclick="resetPomodoro()" class="bg-white/10 hover:bg-white/20 text-white py-3 px-8 rounded-xl font-bold transition w-40">🔄 Làm lại</button>
@@ -151,14 +183,10 @@
 
             <div id="tab-ai" class="tab-content hidden fade-in flex flex-col h-[calc(100vh-100px)]">
                 <h1 class="text-3xl font-bold mb-2">Trợ lý AI SunBot 🤖</h1>
-                <p class="text-gray-400 mb-6">Hỏi đáp đa môn theo phương pháp gợi mở Socratic</p>
-
                 <div class="glass-card flex-1 flex flex-col overflow-hidden border border-orange-500/20">
-                    <div id="ai-chat-box" class="flex-1 overflow-y-auto p-6 flex flex-col gap-4">
-                        </div>
-                    
+                    <div id="ai-chat-box" class="flex-1 overflow-y-auto p-6 flex flex-col gap-4"></div>
                     <div class="p-4 border-t border-white/10 bg-white/5 flex gap-4">
-                        <input type="text" id="ai-input" placeholder="Ví dụ: Làm sao tính tích phân từng phần?" class="input-box flex-1" onkeypress="if(event.key==='Enter') sendAiMessage()">
+                        <input type="text" id="ai-input" placeholder="Ví dụ: Tính chất của hình bình hành?" class="input-box flex-1" onkeypress="if(event.key==='Enter') sendAiMessage()">
                         <button onclick="sendAiMessage()" class="btn-primary px-8">Gửi ↗</button>
                     </div>
                 </div>
@@ -166,16 +194,12 @@
 
             <div id="tab-community" class="tab-content hidden fade-in">
                 <h1 class="text-3xl font-bold mb-6">Diễn đàn Hỏi - Đáp 👥</h1>
-                
                 <div class="glass-card p-6 mb-8 border border-yellow-500/20">
-                    <h3 class="font-bold mb-4">Tạo bài đăng mới</h3>
                     <input type="text" id="forum-title" placeholder="Tiêu đề câu hỏi..." class="input-box mb-4">
-                    <textarea id="forum-content" rows="3" placeholder="Chi tiết thắc mắc của bạn..." class="input-box mb-4 resize-none"></textarea>
+                    <textarea id="forum-content" rows="3" placeholder="Chi tiết thắc mắc..." class="input-box mb-4 resize-none"></textarea>
                     <button onclick="createPost()" class="btn-primary py-2 px-6">Đăng bài</button>
                 </div>
-
-                <div id="forum-feed" class="flex flex-col gap-6">
-                    </div>
+                <div id="forum-feed" class="flex flex-col gap-6"></div>
             </div>
 
         </main>
@@ -184,57 +208,78 @@
     <audio id="ting-sound" src="https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg" preload="auto"></audio>
 
     <script>
-        /* --- 1. QUẢN LÝ STATE TỔNG (LOCAL STORAGE) --- */
+        /* =========================================================
+           1. QUẢN LÝ STATE TỔNG
+           ========================================================= */
         let userProfile = JSON.parse(localStorage.getItem('sl_profile')) || null;
-        let forumPosts = JSON.parse(localStorage.getItem('sl_forum')) || [
-            { id: 1, author: "Gia sư Mẫu", title: "Xin chào Cộng đồng Sunlogic!", content: "Hãy đặt câu hỏi bài tập khó của bạn tại đây để mọi người cùng giải quyết nhé.", votes: 10, isSolved: false, comments: [] }
-        ];
+        let forumPosts = JSON.parse(localStorage.getItem('sl_forum')) || [];
         let tasks = JSON.parse(localStorage.getItem('sl_tasks')) || [];
-
         const today = new Date().toISOString().split('T')[0];
 
         // Khởi động App
         window.onload = () => {
             if (userProfile) {
-                checkDailyLogic();
+                checkDailyReward();
                 showMainApp();
             }
         };
-
-        // Logic check qua ngày
-        function checkDailyLogic() {
-            if (userProfile.lastLogin !== today) {
-                userProfile.streak += 1;
-                userProfile.lastLogin = today;
-                saveProfile();
-            }
-        }
 
         function saveProfile() { localStorage.setItem('sl_profile', JSON.stringify(userProfile)); updateDashboardUI(); }
         function saveForum() { localStorage.setItem('sl_forum', JSON.stringify(forumPosts)); renderForum(); }
         function saveTasks() { localStorage.setItem('sl_tasks', JSON.stringify(tasks)); renderTasks(); }
 
-        /* --- 2. AUTHENTICATION (ĐÃ CẬP NHẬT CHỈ CẦN TÊN ĐĂNG NHẬP) --- */
+        /* =========================================================
+           2. ĐĂNG NHẬP & NHẬN QUÀ (DAILY LOGIN)
+           ========================================================= */
         function handleLogin() {
             const name = document.getElementById('login-name').value.trim();
+            if (!name) return alert("Vui lòng nhập tên đăng nhập!");
 
-            if (!name) return alert("Vui lòng nhập tên đăng nhập để tiếp tục!");
-
+            // Cấu trúc Profile mới có thêm points và lastRewardDate
             userProfile = {
                 name: name,
-                avatar: name[0].toUpperCase(), // Lấy chữ cái đầu làm Avatar
+                avatar: name[0].toUpperCase(),
                 streak: 1,
+                points: 0,
                 pomodoroCount: 0,
                 hearts: 5,
-                lastLogin: today
+                lastLogin: today,
+                lastRewardDate: null
             };
             saveProfile();
             showMainApp();
+            checkDailyReward();
         }
 
         function handleLogout() {
             localStorage.removeItem('sl_profile');
             location.reload();
+        }
+
+        // Logic check quà ngày mới
+        function checkDailyReward() {
+            // Đảm bảo Profile cũ tương thích
+            if(userProfile.points === undefined) userProfile.points = 0;
+            
+            if (userProfile.lastRewardDate !== today) {
+                // Nếu khác ngày, hiện Popup
+                document.getElementById('reward-modal').classList.remove('hidden');
+                
+                // Đồng thời tăng streak nếu khác ngày đăng nhập
+                if (userProfile.lastLogin !== today) {
+                    userProfile.streak += 1;
+                    userProfile.lastLogin = today;
+                    saveProfile();
+                }
+            }
+        }
+
+        function claimReward() {
+            userProfile.points += 50; // Quà là 50 điểm
+            userProfile.lastRewardDate = today;
+            saveProfile();
+            document.getElementById('reward-modal').classList.add('hidden');
+            renderLeaderboard(); // Cập nhật lại Bảng xếp hạng
         }
 
         function showMainApp() {
@@ -243,63 +288,79 @@
             updateDashboardUI();
             renderTasks();
             renderForum();
-            
-            // Chỉ thêm câu chào nếu chat box chưa có gì
+            renderQuizzes();
+            renderLeaderboard();
             const box = document.getElementById('ai-chat-box');
             if(box.innerHTML.trim() === "") {
-                appendAiMsg(`Chào ${userProfile.name}! Mình là Trợ lý AI SunBot. Bạn cần hỏi bài môn gì?`, 'ai');
+                appendAiMsg(`Chào ${userProfile.name}! Trợ lý AI sẵn sàng giải đáp.`, 'ai');
             }
         }
 
-        /* --- 3. ĐIỀU HƯỚNG TABS --- */
         function switchTab(tabId, el) {
-            // Xử lý Active Menu
             document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
             el.classList.add('active');
-
-            // Ẩn tất cả nội dung
             document.querySelectorAll('.tab-content').forEach(tab => tab.classList.add('hidden'));
-            
-            // Hiện tab đích
             document.getElementById('tab-' + tabId).classList.remove('hidden');
         }
 
-        /* --- 4. DASHBOARD & TASKS --- */
+        /* =========================================================
+           3. DASHBOARD, LEADERBOARD & TASKS
+           ========================================================= */
         function updateDashboardUI() {
             if(!userProfile) return;
             document.getElementById('user-name').innerText = userProfile.name;
             document.getElementById('user-avatar').innerText = userProfile.avatar;
             document.getElementById('sidebar-streak').innerText = userProfile.streak;
             document.getElementById('dash-streak').innerText = userProfile.streak;
-            document.getElementById('dash-pomodoro').innerText = userProfile.pomodoroCount;
+            document.getElementById('sidebar-points').innerText = userProfile.points || 0;
+            document.getElementById('dash-points').innerText = userProfile.points || 0;
             
-            // Render Hearts
             let heartsHTML = '';
             for(let i=0; i<5; i++) heartsHTML += i < userProfile.hearts ? '❤️' : '🤍';
             document.getElementById('dash-hearts').innerHTML = heartsHTML;
         }
 
+        // BẢNG XẾP HẠNG (Trộn Dữ liệu Ảo + Dữ liệu Thật của User)
+        const MOCK_LEADERBOARD = [
+            { name: "Minh Quân", points: 2500, avatar: "M" },
+            { name: "Thảo Ngọc", points: 2150, avatar: "T" },
+            { name: "Hải Đăng", points: 1800, avatar: "H" },
+            { name: "Bảo Trâm", points: 1200, avatar: "B" }
+        ];
+
+        function renderLeaderboard() {
+            const list = document.getElementById('leaderboard-list');
+            // Gộp user hiện tại vào mảng
+            let allUsers = [...MOCK_LEADERBOARD, { 
+                name: userProfile.name + " (Bạn)", 
+                points: userProfile.points || 0, 
+                avatar: userProfile.avatar, 
+                isMe: true 
+            }];
+            // Sắp xếp điểm giảm dần
+            allUsers.sort((a, b) => b.points - a.points);
+
+            list.innerHTML = allUsers.map((u, index) => `
+                <div class="flex items-center gap-4 p-3 rounded-xl ${u.isMe ? 'bg-orange-500/20 border border-orange-500/30' : 'bg-white/5'}">
+                    <div class="w-6 text-center font-bold text-gray-400">#${index + 1}</div>
+                    <div class="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center font-bold text-xs">${u.avatar}</div>
+                    <div class="flex-1 font-semibold ${u.isMe ? 'text-orange-400' : 'text-gray-200'}">${u.name}</div>
+                    <div class="font-bold text-yellow-400">${u.points} ⭐</div>
+                </div>
+            `).join('');
+        }
+
+        // TASKS
         function addTask() {
             const input = document.getElementById('task-input');
             if(!input.value.trim()) return;
             tasks.push({ id: Date.now(), text: input.value, done: false });
-            input.value = '';
-            saveTasks();
+            input.value = ''; saveTasks();
         }
-
-        function toggleTask(id) {
-            const t = tasks.find(t => t.id === id);
-            if(t) { t.done = !t.done; saveTasks(); }
-        }
-
-        function delTask(id) {
-            tasks = tasks.filter(t => t.id !== id);
-            saveTasks();
-        }
-
+        function toggleTask(id) { const t = tasks.find(t => t.id === id); if(t) { t.done = !t.done; saveTasks(); } }
+        function delTask(id) { tasks = tasks.filter(t => t.id !== id); saveTasks(); }
         function renderTasks() {
-            const list = document.getElementById('task-list');
-            list.innerHTML = tasks.map(t => `
+            document.getElementById('task-list').innerHTML = tasks.map(t => `
                 <li class="flex items-center gap-3 bg-white/5 p-3 rounded-xl border border-white/10 ${t.done ? 'opacity-50' : ''}">
                     <input type="checkbox" ${t.done ? 'checked' : ''} onchange="toggleTask(${t.id})" class="w-5 h-5 accent-orange-500 cursor-pointer">
                     <span class="flex-1 ${t.done ? 'line-through' : ''}">${t.text}</span>
@@ -308,192 +369,35 @@
             `).join('');
         }
 
-        /* --- 5. POMODORO ĐẾM NGƯỢC --- */
-        let pomTime = 25 * 60;
-        let pomInterval = null;
-        let isPomRunning = false;
-
-        function updatePomDisplay() {
-            const m = Math.floor(pomTime / 60).toString().padStart(2, '0');
-            const s = (pomTime % 60).toString().padStart(2, '0');
-            document.getElementById('timer-display').innerText = `${m}:${s}`;
-        }
-
-        function startPomodoro() {
-            const btn = document.getElementById('btn-pom-start');
-            if (isPomRunning) {
-                // Pause
-                clearInterval(pomInterval);
-                isPomRunning = false;
-                btn.innerHTML = "▶ Tiếp tục";
-                document.getElementById('timer-status').innerText = "Đã tạm dừng";
-            } else {
-                // Start
-                isPomRunning = true;
-                btn.innerHTML = "⏸ Tạm dừng";
-                document.getElementById('timer-status').innerText = "Đang tập trung...";
-                document.getElementById('timer-status').classList.add('text-orange-500');
-                
-                pomInterval = setInterval(() => {
-                    pomTime--;
-                    updatePomDisplay();
-                    if (pomTime <= 0) {
-                        clearInterval(pomInterval);
-                        isPomRunning = false;
-                        document.getElementById('ting-sound').play();
-                        
-                        // Thưởng
-                        userProfile.pomodoroCount += 1;
-                        saveProfile();
-                        
-                        alert("Tuyệt vời! Bạn đã hoàn thành 1 phiên Pomodoro.");
-                        resetPomodoro();
-                    }
-                }, 1000);
+        /* =========================================================
+           4. HỆ THỐNG BÀI KIỂM TRA (QUIZ)
+           ========================================================= */
+        const QUIZZES = [
+            {
+                id: "q1", title: "Toán 12 - Tích Phân Cơ Bản",
+                reward: 100,
+                questions: [
+                    { q: "Họ nguyên hàm của hàm số f(x) = 2x là:", opts: ["x² + C", "2x² + C", "x + C", "x²/2 + C"], ans: 0 },
+                    { q: "∫sin(x)dx bằng:", opts: ["-cos(x) + C", "cos(x) + C", "sin(x) + C", "-sin(x) + C"], ans: 0 },
+                    { q: "∫e^x dx bằng:", opts: ["e^x + C", "x.e^x + C", "e^(x+1) + C", "ln(x) + C"], ans: 0 }
+                ]
+            },
+            {
+                id: "q2", title: "Tiếng Anh - Thì Hiện Tại",
+                reward: 100,
+                questions: [
+                    { q: "She usually ___ to school by bus.", opts: ["go", "goes", "going", "gone"], ans: 1 },
+                    { q: "I ___ English right now.", opts: ["study", "studies", "am studying", "studied"], ans: 2 }
+                ]
             }
-        }
-
-        function resetPomodoro() {
-            clearInterval(pomInterval);
-            isPomRunning = false;
-            pomTime = 25 * 60;
-            updatePomDisplay();
-            document.getElementById('btn-pom-start').innerHTML = "▶ Bắt đầu";
-            document.getElementById('timer-status').innerText = "Sẵn sàng";
-            document.getElementById('timer-status').classList.remove('text-orange-500');
-        }
-
-        /* --- 6. AI TUTOR (TỪ KHÓA) --- */
-        const AI_KNOWLEDGE = [
-            { keys: ["dien tich", "hinh tron"], ans: "Diện tích hình tròn là **S = π × R²** bạn nhé!" },
-            { keys: ["tich phan", "tung phan"], ans: "Với bài tích phân từng phần $\\int u\\,dv$, hãy dùng mẹo 'Kẻ bảng' (Múa cột): Cột 1 đạo hàm (chọn u là log/đa thức), Cột 2 nguyên hàm (dv là lượng giác/mũ). Thử xem!" },
-            { keys: ["vo nhat", "kim lan"], ans: "Truyện 'Vợ nhặt' phản ánh nạn đói 1945. Điểm sáng là khát vọng sống và tình người của Tràng, Thị, cụ Tứ giữa ranh giới sinh tử." },
-            { keys: ["dao ham", "x"], ans: "Đạo hàm cơ bản: Đạo hàm của $x^n$ là $n.x^{n-1}$. Bạn vướng bài nào cứ gõ ra nhé." }
         ];
 
-        function removeAccents(str) { return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); }
+        let activeQuiz = null;
+        let userAnswers = []; // Lưu mảng đáp án người dùng chọn
 
-        function sendAiMessage() {
-            const input = document.getElementById('ai-input');
-            const text = input.value.trim();
-            if(!text) return;
-
-            appendAiMsg(text, 'user');
-            input.value = '';
-
-            // Loading
-            const box = document.getElementById('ai-chat-box');
-            const typingId = 'typing-' + Date.now();
-            box.innerHTML += `<div id="${typingId}" class="flex gap-3"><div class="w-8 h-8 rounded-full bg-gradient-to-br from-orange-500 to-yellow-500 flex items-center justify-center">🤖</div><div class="bg-white/5 p-3 rounded-2xl rounded-tl-none chat-typing border border-white/10"><span></span><span></span><span></span></div></div>`;
-            box.scrollTop = box.scrollHeight;
-
-            // Xử lý AI
-            setTimeout(() => {
-                document.getElementById(typingId).remove();
-                
-                const cleanText = removeAccents(text);
-                let response = "Câu hỏi hay đấy! Thay vì đưa đáp án thẳng, bạn đã thử hướng làm nào chưa? Hãy phân tích thử dữ kiện đề bài cho xem.";
-                
-                for(let item of AI_KNOWLEDGE) {
-                    if(item.keys.some(k => cleanText.includes(removeAccents(k)))) {
-                        response = item.ans; break;
-                    }
-                }
-                appendAiMsg(response, 'ai');
-            }, 1000);
-        }
-
-        function appendAiMsg(text, role) {
-            const box = document.getElementById('ai-chat-box');
-            if (role === 'user') {
-                box.innerHTML += `<div class="flex justify-end"><div class="bg-gradient-to-r from-orange-500 to-yellow-500 text-white p-3 rounded-2xl rounded-tr-none max-w-[80%]">${text}</div></div>`;
-            } else {
-                // Parse markdown basic bold
-                let formatted = text.replace(/\*\*(.*?)\*\*/g, '<b class="text-orange-400">$1</b>');
-                box.innerHTML += `<div class="flex gap-3"><div class="w-8 h-8 shrink-0 rounded-full bg-gradient-to-br from-orange-500 to-yellow-500 flex items-center justify-center font-bold shadow-lg">🤖</div><div class="bg-white/5 p-3 rounded-2xl rounded-tl-none max-w-[80%] border border-white/10 leading-relaxed text-gray-200">${formatted}</div></div>`;
-            }
-            box.scrollTop = box.scrollHeight;
-        }
-
-        /* --- 7. FORUM CỘNG ĐỒNG --- */
-        function renderForum() {
-            const feed = document.getElementById('forum-feed');
-            feed.innerHTML = forumPosts.map(post => `
-                <div class="glass-card p-6">
-                    <div class="flex justify-between items-center mb-3">
-                        <div class="flex items-center gap-2">
-                            <div class="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-xs font-bold">${post.author[0]}</div>
-                            <span class="font-bold text-orange-400">${post.author}</span>
-                        </div>
-                        ${post.isSolved ? '<span class="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded font-bold">✓ Đã giải quyết</span>' : ''}
-                    </div>
-                    <h3 class="text-lg font-bold mb-2">${post.title}</h3>
-                    <p class="text-gray-400 text-sm mb-4">${post.content}</p>
-                    
-                    <div class="flex gap-4 mb-4 border-b border-white/10 pb-4">
-                        <button onclick="upvotePost(${post.id})" class="text-sm font-bold text-orange-500 hover:text-orange-400">▲ ${post.votes} Hữu ích</button>
-                    </div>
-
-                    <div class="space-y-3 mb-4 pl-4 border-l-2 border-white/10">
-                        ${post.comments.map(c => `
-                            <div class="bg-white/5 p-3 rounded-xl border ${c.isCorrect ? 'border-green-500/50' : 'border-white/5'}">
-                                <div class="flex justify-between mb-1">
-                                    <span class="font-bold text-sm text-gray-300">${c.author}</span>
-                                    ${c.isCorrect ? '<span class="text-green-400 text-xs font-bold">★ Hay nhất</span>' : `<button onclick="markCorrect(${post.id}, ${c.id})" class="text-xs text-gray-500 hover:text-green-400">Đánh dấu Đúng</button>`}
-                                </div>
-                                <p class="text-sm text-gray-400">${c.content}</p>
-                            </div>
-                        `).join('')}
-                    </div>
-
-                    <div class="flex gap-2">
-                        <input type="text" id="cmt-${post.id}" placeholder="Viết câu trả lời..." class="input-box text-sm py-2" onkeypress="if(event.key==='Enter') addComment(${post.id})">
-                        <button onclick="addComment(${post.id})" class="bg-white/10 hover:bg-white/20 px-4 rounded-xl text-sm font-bold transition">Gửi</button>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function createPost() {
-            const title = document.getElementById('forum-title').value.trim();
-            const content = document.getElementById('forum-content').value.trim();
-            if(!title || !content) return;
-            
-            forumPosts.unshift({
-                id: Date.now(),
-                author: userProfile.name,
-                title, content,
-                votes: 0, isSolved: false, comments: []
-            });
-            document.getElementById('forum-title').value = '';
-            document.getElementById('forum-content').value = '';
-            saveForum();
-        }
-
-        function upvotePost(id) {
-            const p = forumPosts.find(p => p.id === id);
-            if(p) { p.votes++; saveForum(); }
-        }
-
-        function addComment(postId) {
-            const input = document.getElementById(`cmt-${postId}`);
-            if(!input.value.trim()) return;
-            const p = forumPosts.find(p => p.id === postId);
-            if(p) {
-                p.comments.push({ id: Date.now(), author: userProfile.name, content: input.value, isCorrect: false });
-                input.value = ''; // Xoá trắng ô nhập
-                saveForum();
-            }
-        }
-
-        function markCorrect(postId, cmtId) {
-            const p = forumPosts.find(p => p.id === postId);
-            if(p) {
-                p.isSolved = true;
-                p.comments.forEach(c => c.isCorrect = (c.id === cmtId));
-                saveForum();
-            }
-        }
-    </script>
-</body>
-</html>
+        function renderQuizzes() {
+            document.getElementById('quiz-cards').innerHTML = QUIZZES.map(q => `
+                <div class="glass-card p-6 border border-white/10 hover:border-orange-500/50 transition cursor-pointer" onclick="openQuiz('${q.id}')">
+                    <h3 class="text-xl font-bold mb-2">${q.title}</h3>
+                    <p class="text-sm text-gray-400 mb-4">${q.questions.length} câu hỏi • Thưởng: +${q.reward} điểm</p>
+                    <button class="bg-white/10 text-orange-400 font-bold py-
