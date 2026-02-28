@@ -60,12 +60,10 @@
         </div>
         <div class="w-full md:w-[500px] flex items-center justify-center p-8 bg-[#0d0d18]">
             <div class="w-full max-w-sm">
-                <h2 class="text-3xl font-bold mb-2">Chào mừng trở lại 👋</h2>
-                <p class="text-gray-500 mb-8 text-sm">Đăng nhập để tiếp tục chuỗi ngày học tập</p>
+                <h2 class="text-3xl font-bold mb-2">Chào mừng 👋</h2>
+                <p class="text-gray-500 mb-8 text-sm">Chỉ cần nhập tên của bạn để bắt đầu</p>
                 
-                <input type="text" id="login-name" placeholder="Họ và tên của bạn" class="input-box mb-4">
-                <input type="email" id="login-email" placeholder="Email" class="input-box mb-4">
-                <input type="password" id="login-pass" placeholder="Mật khẩu" class="input-box mb-6">
+                <input type="text" id="login-name" placeholder="Tên đăng nhập (VD: Hải Nam)" class="input-box mb-6 text-lg py-4" onkeypress="if(event.key==='Enter') handleLogin()">
                 
                 <button onclick="handleLogin()" class="btn-primary w-full py-4 text-lg">🚀 Vào không gian học tập</button>
             </div>
@@ -216,18 +214,15 @@
         function saveForum() { localStorage.setItem('sl_forum', JSON.stringify(forumPosts)); renderForum(); }
         function saveTasks() { localStorage.setItem('sl_tasks', JSON.stringify(tasks)); renderTasks(); }
 
-        /* --- 2. AUTHENTICATION --- */
+        /* --- 2. AUTHENTICATION (ĐÃ CẬP NHẬT CHỈ CẦN TÊN ĐĂNG NHẬP) --- */
         function handleLogin() {
             const name = document.getElementById('login-name').value.trim();
-            const email = document.getElementById('login-email').value.trim();
-            const pass = document.getElementById('login-pass').value.trim();
 
-            if (!email || pass.length < 6) return alert("Vui lòng nhập Email và Mật khẩu hợp lệ!");
+            if (!name) return alert("Vui lòng nhập tên đăng nhập để tiếp tục!");
 
             userProfile = {
-                name: name || email.split('@')[0],
-                email: email,
-                avatar: (name || email)[0].toUpperCase(),
+                name: name,
+                avatar: name[0].toUpperCase(), // Lấy chữ cái đầu làm Avatar
                 streak: 1,
                 pomodoroCount: 0,
                 hearts: 5,
@@ -248,7 +243,12 @@
             updateDashboardUI();
             renderTasks();
             renderForum();
-            appendAiMsg(`Chào ${userProfile.name}! Mình là Trợ lý AI SunBot. Bạn cần hỏi bài môn gì?`, 'ai');
+            
+            // Chỉ thêm câu chào nếu chat box chưa có gì
+            const box = document.getElementById('ai-chat-box');
+            if(box.innerHTML.trim() === "") {
+                appendAiMsg(`Chào ${userProfile.name}! Mình là Trợ lý AI SunBot. Bạn cần hỏi bài môn gì?`, 'ai');
+            }
         }
 
         /* --- 3. ĐIỀU HƯỚNG TABS --- */
@@ -447,7 +447,7 @@
                     </div>
 
                     <div class="flex gap-2">
-                        <input type="text" id="cmt-${post.id}" placeholder="Viết câu trả lời..." class="input-box text-sm py-2">
+                        <input type="text" id="cmt-${post.id}" placeholder="Viết câu trả lời..." class="input-box text-sm py-2" onkeypress="if(event.key==='Enter') addComment(${post.id})">
                         <button onclick="addComment(${post.id})" class="bg-white/10 hover:bg-white/20 px-4 rounded-xl text-sm font-bold transition">Gửi</button>
                     </div>
                 </div>
@@ -481,6 +481,7 @@
             const p = forumPosts.find(p => p.id === postId);
             if(p) {
                 p.comments.push({ id: Date.now(), author: userProfile.name, content: input.value, isCorrect: false });
+                input.value = ''; // Xoá trắng ô nhập
                 saveForum();
             }
         }
