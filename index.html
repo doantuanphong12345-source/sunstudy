@@ -400,4 +400,222 @@
                 <div class="glass-card p-6 border border-white/10 hover:border-orange-500/50 transition cursor-pointer" onclick="openQuiz('${q.id}')">
                     <h3 class="text-xl font-bold mb-2">${q.title}</h3>
                     <p class="text-sm text-gray-400 mb-4">${q.questions.length} câu hỏi • Thưởng: +${q.reward} điểm</p>
-                    <button class="bg-white/10 text-orange-400 font-bold py-
+                    <button class="bg-white/10 text-orange-400 font-bold py-2 px-4 rounded-lg w-full">Làm bài</button>
+                </div>
+            `).join('');
+        }
+
+        function openQuiz(quizId) {
+            activeQuiz = QUIZZES.find(q => q.id === quizId);
+            userAnswers = new Array(activeQuiz.questions.length).fill(null); // Tạo mảng rỗng
+            
+            document.getElementById('quiz-list-view').classList.add('hidden');
+            document.getElementById('quiz-active-view').classList.remove('hidden');
+            document.getElementById('active-quiz-title').innerText = activeQuiz.title;
+            
+            // Xóa vùng nút submit phòng trường hợp đã nộp bài trước đó
+            document.getElementById('quiz-submit-zone').innerHTML = `<button onclick="submitQuiz()" class="btn-primary py-3 px-8 text-lg w-full">Nộp Bài Ngay</button>`;
+            
+            renderQuestions();
+        }
+
+        function closeQuiz() {
+            activeQuiz = null;
+            document.getElementById('quiz-active-view').classList.add('hidden');
+            document.getElementById('quiz-list-view').classList.remove('hidden');
+        }
+
+        function renderQuestions(isSubmitted = false) {
+            const container = document.getElementById('quiz-questions-container');
+            container.innerHTML = activeQuiz.questions.map((question, qIndex) => {
+                
+                // Trạng thái chọn đáp án
+                const optionsHTML = question.opts.map((opt, oIndex) => {
+                    let btnClass = "quiz-opt p-3 rounded-xl mb-2 text-left w-full ";
+                    
+                    if (!isSubmitted) {
+                        // Trạng thái Đang làm
+                        if (userAnswers[qIndex] === oIndex) btnClass += "selected";
+                        return `<button onclick="selectOption(${qIndex}, ${oIndex})" class="${btnClass}">${String.fromCharCode(65+oIndex)}. ${opt}</button>`;
+                    } else {
+                        // Trạng thái Đã nộp
+                        if (oIndex === question.ans) btnClass += "correct text-white font-bold"; // Đáp án đúng
+                        else if (userAnswers[qIndex] === oIndex && oIndex !== question.ans) btnClass += "wrong text-white"; // User chọn sai
+                        
+                        return `<div class="${btnClass} cursor-default">${String.fromCharCode(65+oIndex)}. ${opt}</div>`;
+                    }
+                }).join('');
+
+                return `
+                    <div class="bg-white/5 p-6 rounded-2xl border border-white/5">
+                        <p class="font-bold text-lg mb-4">Câu ${qIndex + 1}: ${question.q}</p>
+                        ${optionsHTML}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function selectOption(qIndex, oIndex) {
+            userAnswers[qIndex] = oIndex;
+            renderQuestions(); // Cập nhật lại UI để highlight lựa chọn
+        }
+
+        function submitQuiz() {
+            // Kiểm tra làm thiếu
+            if (userAnswers.includes(null)) {
+                return alert("Vui lòng trả lời hết tất cả các câu trước khi nộp!");
+            }
+
+            // Chấm điểm
+            let correctCount = 0;
+            activeQuiz.questions.forEach((q, i) => {
+                if (userAnswers[i] === q.ans) correctCount++;
+            });
+
+            // Vẽ lại UI đã chấm
+            renderQuestions(true);
+
+            // Xử lý cộng điểm
+            const isPerfect = correctCount === activeQuiz.questions.length;
+            let resultHTML = `<div class="text-2xl font-bold mb-2 ${isPerfect ? 'text-green-400' : 'text-yellow-400'}">Kết quả: ${correctCount}/${activeQuiz.questions.length} câu đúng!</div>`;
+            
+            if (isPerfect) {
+                userProfile.points += activeQuiz.reward;
+                saveProfile();
+                renderLeaderboard(); // Cập nhật BXH
+                resultHTML += `<p class="text-gray-300">Tuyệt vời! Bạn nhận được <b class="text-orange-400">+${activeQuiz.reward} điểm</b> thưởng.</p>`;
+            } else {
+                resultHTML += `<p class="text-gray-300">Cố gắng thêm chút nữa nhé! Phải đúng hết mới được nhận thưởng.</p>`;
+            }
+
+            document.getElementById('quiz-submit-zone').innerHTML = resultHTML;
+        }
+
+        /* =========================================================
+           5. POMODORO ĐẾM NGƯỢC
+           ========================================================= */
+        let pomTime = 25 * 60;
+        let pomInterval = null;
+        let isPomRunning = false;
+
+        function updatePomDisplay() {
+            const m = Math.floor(pomTime / 60).toString().padStart(2, '0');
+            const s = (pomTime % 60).toString().padStart(2, '0');
+            document.getElementById('timer-display').innerText = `${m}:${s}`;
+        }
+
+        function startPomodoro() {
+            const btn = document.getElementById('btn-pom-start');
+            if (isPomRunning) {
+                clearInterval(pomInterval);
+                isPomRunning = false;
+                btn.innerHTML = "▶ Tiếp tục";
+                document.getElementById('timer-status').innerText = "Đã tạm dừng";
+            } else {
+                isPomRunning = true;
+                btn.innerHTML = "⏸ Tạm dừng";
+                document.getElementById('timer-status').innerText = "Đang tập trung...";
+                document.getElementById('timer-status').classList.add('text-orange-500');
+                
+                pomInterval = setInterval(() => {
+                    pomTime--;
+                    updatePomDisplay();
+                    if (pomTime <= 0) {
+                        clearInterval(pomInterval);
+                        isPomRunning = false;
+                        document.getElementById('ting-sound').play();
+                        
+                        // Thưởng 20 điểm mỗi Pomodoro
+                        userProfile.points += 20;
+                        saveProfile();
+                        renderLeaderboard();
+                        
+                        alert("Hoàn thành Pomodoro! Bạn được cộng +20 điểm.");
+                        resetPomodoro();
+                    }
+                }, 1000);
+            }
+        }
+
+        function resetPomodoro() {
+            clearInterval(pomInterval);
+            isPomRunning = false;
+            pomTime = 25 * 60;
+            updatePomDisplay();
+            document.getElementById('btn-pom-start').innerHTML = "▶ Bắt đầu";
+            document.getElementById('timer-status').innerText = "Sẵn sàng";
+            document.getElementById('timer-status').classList.remove('text-orange-500');
+        }
+
+        /* =========================================================
+           6. AI TUTOR VÀ DIỄN ĐÀN (Giữ nguyên logic trước)
+           ========================================================= */
+        const AI_KNOWLEDGE = [
+            { keys: ["dien tich", "hinh tron"], ans: "Diện tích hình tròn là **S = π × R²** bạn nhé!" },
+            { keys: ["tich phan"], ans: "Với bài tích phân từng phần $\\int u\\,dv$, hãy dùng mẹo 'Kẻ bảng' (Múa cột): Cột 1 đạo hàm (chọn u là log/đa thức), Cột 2 nguyên hàm." }
+        ];
+
+        function removeAccents(str) { return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); }
+
+        function sendAiMessage() {
+            const input = document.getElementById('ai-input');
+            const text = input.value.trim();
+            if(!text) return;
+
+            appendAiMsg(text, 'user');
+            input.value = '';
+
+            const box = document.getElementById('ai-chat-box');
+            const typingId = 'typing-' + Date.now();
+            box.innerHTML += `<div id="${typingId}" class="flex gap-3"><div class="w-8 h-8 rounded-full bg-gradient-to-br from-orange-500 to-yellow-500 flex items-center justify-center">🤖</div><div class="bg-white/5 p-3 rounded-2xl rounded-tl-none chat-typing border border-white/10"><span></span><span></span><span></span></div></div>`;
+            box.scrollTop = box.scrollHeight;
+
+            setTimeout(() => {
+                document.getElementById(typingId).remove();
+                const cleanText = removeAccents(text);
+                let response = "Câu hỏi hay đấy! Hãy phân tích thử dữ kiện đề bài cho mình xem.";
+                for(let item of AI_KNOWLEDGE) {
+                    if(item.keys.some(k => cleanText.includes(removeAccents(k)))) {
+                        response = item.ans; break;
+                    }
+                }
+                appendAiMsg(response, 'ai');
+            }, 1000);
+        }
+
+        function appendAiMsg(text, role) {
+            const box = document.getElementById('ai-chat-box');
+            if (role === 'user') {
+                box.innerHTML += `<div class="flex justify-end"><div class="bg-gradient-to-r from-orange-500 to-yellow-500 text-white p-3 rounded-2xl rounded-tr-none max-w-[80%]">${text}</div></div>`;
+            } else {
+                let formatted = text.replace(/\*\*(.*?)\*\*/g, '<b class="text-orange-400">$1</b>');
+                box.innerHTML += `<div class="flex gap-3"><div class="w-8 h-8 shrink-0 rounded-full bg-gradient-to-br from-orange-500 to-yellow-500 flex items-center justify-center font-bold shadow-lg">🤖</div><div class="bg-white/5 p-3 rounded-2xl rounded-tl-none max-w-[80%] border border-white/10 leading-relaxed text-gray-200">${formatted}</div></div>`;
+            }
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function renderForum() {
+            document.getElementById('forum-feed').innerHTML = forumPosts.map(post => `
+                <div class="glass-card p-6">
+                    <div class="flex items-center gap-2 mb-3">
+                        <div class="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-xs font-bold">${post.author[0]}</div>
+                        <span class="font-bold text-orange-400">${post.author}</span>
+                    </div>
+                    <h3 class="text-lg font-bold mb-2">${post.title}</h3>
+                    <p class="text-gray-400 text-sm mb-4">${post.content}</p>
+                </div>
+            `).join('');
+        }
+
+        function createPost() {
+            const title = document.getElementById('forum-title').value.trim();
+            const content = document.getElementById('forum-content').value.trim();
+            if(!title || !content) return;
+            forumPosts.unshift({ id: Date.now(), author: userProfile.name, title, content });
+            document.getElementById('forum-title').value = '';
+            document.getElementById('forum-content').value = '';
+            saveForum();
+        }
+    </script>
+</body>
+</html>
