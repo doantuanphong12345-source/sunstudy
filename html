@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sunlogic - Khai sáng tư duy</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        bgCream: '#FDFDFD',
+                        primaryOrange: '#FF512F',
+                        primaryYellow: '#F09819',
+                        accentBlue: '#4FACFE',
+                        accentGreen: '#22C55E'
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* CSS Thuần - Hiệu ứng và Glassmorphism */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #FDFDFD; overflow-x: hidden; }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+            border-radius: 1rem;
+        }
+
+        .gradient-text {
+            background: linear-gradient(to right, #FF512F, #F09819);
+            -webkit-background-clip: text;
+            color: transparent;
+        }
+
+        .gradient-bg {
+            background: linear-gradient(to right, #FF512F, #F09819);
+        }
+
+        /* Nền bong bóng mờ ảo (Blobs) */
+        .blob {
+            position: absolute; filter: blur(80px); z-index: -1; opacity: 0.4; border-radius: 50%;
+            animation: float 10s infinite ease-in-out alternate;
+        }
+        .blob-1 { top: -10%; left: -10%; width: 400px; height: 400px; background: #FF512F; }
+        .blob-2 { bottom: -10%; right: -10%; width: 500px; height: 500px; background: #4FACFE; animation-delay: -5s;}
+
+        @keyframes float {
+            0% { transform: translateY(0) scale(1); }
+            100% { transform: translateY(30px) scale(1.1); }
+        }
+
+        /* Hiệu ứng đập của trái tim */
+        .pulse-heart { animation: pulse 1.5s infinite; }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        /* Hiệu ứng bay của sticker cổ vũ */
+        .flying-emoji {
+            position: fixed; bottom: 50px; left: 50%; font-size: 2rem; z-index: 1000;
+            animation: flyUp 2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+            pointer-events: none;
+        }
+        @keyframes flyUp {
+            0% { transform: translate(-50%, 0) scale(0.5); opacity: 1; }
+            100% { transform: translate(calc(-50% + (var(--randX) * 100px)), -400px) scale(1.5); opacity: 0; }
+        }
+
+        /* Đồng hồ Pomodoro SVG */
+        .pomodoro-ring {
+            transition: stroke-dashoffset 1s linear;
+            stroke: url(#gradient);
+        }
+        
+        /* Khung chat AI */
+        #ai-chat-widget { transition: transform 0.3s ease; }
+        .chat-hidden { transform: translateY(120%); }
+    </style>
+</head>
+<body class="text-gray-800 relative min-h-screen flex flex-col">
+
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+
+    <div id="login-view" class="flex flex-col md:flex-row h-screen w-full items-center justify-center p-6 gap-10">
+        <div class="md:w-1/2 max-w-lg text-center md:text-left">
+            <div class="flex items-center justify-center md:justify-start gap-3 mb-6">
+                <div class="w-16 h-16 rounded-full bg-white shadow-lg border-4 border-accentBlue flex items-center justify-center relative overflow-hidden">
+                    <i class="fa-regular fa-lightbulb text-2xl text-primaryYellow z-10"></i>
+                    <div class="absolute inset-0 bg-accentBlue opacity-20"></div>
+                </div>
+                <h1 class="text-5xl font-extrabold gradient-text tracking-tight">Sunlogic</h1>
+            </div>
+            <h2 class="text-3xl font-bold mb-4">Học thông minh hơn,<br>không cần học cực hơn.</h2>
+            <p class="text-gray-600 text-lg leading-relaxed">
+                Học tập giống như leo núi. Nỗ lực mù quáng chỉ mang lại áp lực vô hình. Khi sự chăm chỉ được soi đường bởi phương pháp logic, việc học sẽ trở về với bản chất nguyên thủy đẹp đẽ của nó.
+            </p>
+        </div>
+
+        <div class="md:w-1/2 w-full max-w-md">
+            <div class="glass-card p-8">
+                <h3 class="text-2xl font-bold text-center mb-6">Bắt đầu hành trình</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-semibold mb-1">Email của bạn</label>
+                        <input type="email" id="login-email" placeholder="hocsinh@gmail.com" class="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primaryOrange bg-white/80">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold mb-1">Mật khẩu</label>
+                        <input type="password" id="login-pass" placeholder="••••••••" class="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primaryOrange bg-white/80">
+                    </div>
+                    <button onclick="handleLogin()" class="w-full gradient-bg text-white font-bold py-3 rounded-lg shadow-lg hover:shadow-xl transition transform hover:-translate-y-1">
+                        Vào không gian học tập
+                    </button>
+                    
+                    <div class="relative flex py-2 items-center">
+                        <div class="flex-grow border-t border-gray-300"></div>
+                        <span class="flex-shrink-0 mx-4 text-gray-400 text-sm">Hoặc</span>
+                        <div class="flex-grow border-t border-gray-300"></div>
+                    </div>
+
+                    <button class="w-full bg-white text-gray-700 font-semibold py-3 rounded-lg border border-gray-300 shadow-sm hover:bg-gray-50 transition flex items-center justify-center gap-2">
+                        <i class="fa-brands fa-google text-red-500"></i> Tiếp tục với Google
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <div id="app-view" style="display: none;" class="w-full max-w-7xl mx-auto p-4 md:p-6 flex-grow flex flex-col">
+        
+        <header class="glass-card flex flex-wrap items-center justify-between p-4 mb-6 sticky top-4 z-50">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-white shadow flex items-center justify-center border-2 border-accentBlue">
+                    <i class="fa-regular fa-lightbulb text-primaryYellow"></i>
+                </div>
+                <span class="font-bold text-xl gradient-text hidden sm:block">Sunlogic</span>
+            </div>
+
+            <div class="flex items-center gap-4 md:gap-8 bg-white/50 px-4 py-2 rounded-full border border-gray-100 shadow-inner">
+                <div class="flex items-center gap-1 font-bold text-gray-700 tooltip" title="Chuỗi ngày học">
+                    <span class="text-xl">🔥</span>
+                    <span id="streak-count">0</span>
+                </div>
+                <div id="hearts-container" class="flex gap-1 text-red-500 text-lg pulse-heart">
+                    </div>
+                <div class="flex items-center gap-1 font-bold text-gray-700 tooltip" title="Tổng phút tập trung">
+                    <i class="fa-solid fa-clock text-accentBlue"></i>
+                    <span id="total-time">0</span>p
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <div class="hidden md:block text-right">
+                    <p id="user-display-name" class="font-bold text-sm">Học sinh</p>
+                    <p class="text-xs text-gray-500 cursor-pointer hover:text-red-500" onclick="handleLogout()">Đăng xuất</p>
+                </div>
+                <img src="https://ui-avatars.com/api/?name=User&background=4FACFE&color=fff" class="w-10 h-10 rounded-full border-2 border-white shadow">
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-grow">
+            
+            <div class="glass-card p-6 flex flex-col">
+                <h3 class="font-bold text-lg mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-list-check text-accentGreen"></i> Nhiệm vụ hôm nay
+                </h3>
+                
+                <div class="flex gap-2 mb-4">
+                    <input type="text" id="task-input" placeholder="Ví dụ: Giải 5 bài tích phân..." class="flex-grow px-3 py-2 rounded border focus:ring-2 focus:ring-accentBlue outline-none bg-white/70">
+                    <button onclick="addTask()" class="bg-accentBlue text-white px-4 rounded hover:bg-blue-500 transition"><i class="fa-solid fa-plus"></i></button>
+                </div>
+
+                <ul id="task-list" class="space-y-2 flex-grow overflow-y-auto mb-4">
+                    </ul>
+
+                <button onclick="generateMockSchedule()" class="w-full mt-auto py-2 border-2 border-dashed border-gray-300 rounded text-gray-500 hover:border-primaryOrange hover:text-primaryOrange transition font-semibold text-sm">
+                    ✨ AI Lập lịch mẫu (Toán 12)
+                </button>
+            </div>
+
+            <div class="glass-card p-6 flex flex-col items-center justify-center text-center relative overflow-hidden">
+                <h3 class="font-bold text-lg mb-2 absolute top-6">Phiên Tập Trung</h3>
+                
+                <div class="relative w-64 h-64 mt-8 flex items-center justify-center">
+                    <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                        <defs>
+                            <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" stop-color="#FF512F" />
+                                <stop offset="100%" stop-color="#F09819" />
+                            </linearGradient>
+                        </defs>
+                        <circle cx="50" cy="50" r="45" fill="none" stroke="#f0f0f0" stroke-width="6"></circle>
+                        <circle id="pomodoro-circle" cx="50" cy="50" r="45" fill="none" stroke-width="6" stroke-dasharray="283" stroke-dashoffset="0" stroke-linecap="round" class="pomodoro-ring"></circle>
+                    </svg>
+                    <div class="absolute inset-0 flex flex-col items-center justify-center">
+                        <span id="timer-display" class="text-5xl font-extrabold text-gray-800 tracking-wider">25:00</span>
+                        <span id="timer-status" class="text-sm text-gray-500 mt-1 uppercase tracking-widest">Sẵn sàng</span>
+                    </div>
+                </div>
+
+                <div class="flex gap-4 mt-8 z-10">
+                    <button onclick="startTimer()" class="w-14 h-14 rounded-full gradient-bg text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-play"></i>
+                    </button>
+                    <button onclick="pauseTimer()" class="w-14 h-14 rounded-full bg-white text-gray-700 shadow border hover:bg-gray-50 transition flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-pause"></i>
+                    </button>
+                    <button onclick="resetTimer()" class="w-14 h-14 rounded-full bg-gray-100 text-gray-600 shadow hover:bg-gray-200 transition flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-rotate-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="glass-card p-6 flex flex-col">
+                <div class="bg-white/60 rounded-xl p-4 mb-4 border border-gray-100 shadow-sm">
+                    <h3 class="font-bold text-sm text-gray-500 mb-2 uppercase tracking-wide">Phòng Tự Học Chung</h3>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <span class="relative flex h-3 w-3">
+                              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                              <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                            </span>
+                            <span class="font-bold text-xl">1,204</span> <span class="text-sm text-gray-600">bạn đang học</span>
+                        </div>
+                        <button onclick="cheerUp()" class="bg-red-50 text-red-500 hover:bg-red-100 px-3 py-1.5 rounded-full text-sm font-bold transition flex items-center gap-1 border border-red-100">
+                            ❤️ Cổ vũ
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex-grow">
+                    <h3 class="font-bold text-sm text-gray-500 mb-3 uppercase tracking-wide">Q&A Nổi Bật</h3>
+                    <div class="bg-white/80 p-4 rounded-xl shadow-sm border border-gray-100 mb-3 cursor-pointer hover:shadow-md transition">
+                        <h4 class="font-bold text-gray-800 mb-1">Xin mẹo nhớ công thức phương trình mặt phẳng Oxyz?</h4>
+                        <div class="flex gap-2 mt-2">
+                            <span class="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded">Toán 12</span>
+                        </div>
+                        <div class="mt-3 bg-green-50/50 p-3 rounded-lg border border-green-200 border-l-4 border-l-accentGreen">
+                            <div class="flex items-center gap-2 mb-1">
+                                <i class="fa-solid fa-circle-check text-accentGreen"></i>
+                                <span class="text-xs font-bold text-accentGreen uppercase tracking-wider">Đã giải quyết</span>
+                            </div>
+                            <p class="text-sm text-gray-700">"Nhớ câu thần chú: Vectơ pháp tuyến là hệ số của x,y,z..."</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="fixed bottom-6 right-6 z-50 flex flex-col items-end">
+            <div id="ai-chat-window" class="chat-hidden glass-card w-80 mb-4 overflow-hidden border-2 border-accentBlue/30 shadow-2xl flex flex-col" style="height: 400px; display: none;">
+                <div class="bg-gradient-to-r from-[#4FACFE] to-[#00F2FE] p-3 text-white font-bold flex justify-between items-center shadow-md">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-robot text-xl"></i> Gia sư Sunlogic AI
+                    </div>
+                    <button onclick="toggleChat()" class="text-white hover:text-gray-200"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                
+                <div id="chat-messages" class="flex-grow p-4 overflow-y-auto flex flex-col gap-3 text-sm bg-white/50">
+                    <div class="self-start bg-gray-100 text-gray-800 px-4 py-2 rounded-2xl rounded-tl-none max-w-[85%] border shadow-sm">
+                        Chào bạn! Hôm nay chúng ta cần giải quyết bài toán nào? Hãy gõ câu hỏi vào bên dưới nhé.
+                    </div>
+                </div>
+
+                <div class="p-3 border-t bg-white flex gap-2">
+                    <input type="text" id="chat-input" placeholder="Hỏi toán 12..." class="flex-grow px-3 py-2 border rounded-full text-sm focus:outline-none focus:border-accentBlue bg-gray-50" onkeypress="handleChatEnter(event)">
+                    <button onclick="sendChatMessage()" class="bg-accentBlue text-white w-9 h-9 rounded-full hover:bg-blue-500 transition flex items-center justify-center shrink-0">
+                        <i class="fa-solid fa-paper-plane text-sm"></i>
+                    </button>
+                </div>
+            </div>
+
+            <button onclick="toggleChat()" class="w-16 h-16 rounded-full bg-gradient-to-r from-[#4FACFE] to-[#00F2FE] text-white shadow-[0_0_15px_rgba(79,172,254,0.5)] hover:scale-110 transition duration-300 flex items-center justify-center text-2xl border-2 border-white">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+            </button>
+        </div>
+    </div>
+
+    <audio id="ting-sound" src="https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg" preload="auto"></audio>
+
+    <script>
+        /* =========================================
+           STATE MANAGEMENT & LOCAL STORAGE
+           ========================================= */
+        let state = {
+            isLoggedIn: false,
+            email: '',
+            hearts: 5,
+            streak: 0,
+            totalMinutes: 0,
+            lastActiveDate: ''
+        };
+
+        // Khởi tạo
+        function initApp() {
+            const savedState = localStorage.getItem('sunlogic_state');
+            if (savedState) {
+                state = JSON.parse(savedState);
+            }
+            
+            // Xử lý Logic Gamification qua ngày mới
+            const today = new Date().toISOString().split('T')[0];
+            if (state.lastActiveDate && state.lastActiveDate !== today) {
+                // Sang ngày mới. Nếu tổng phút hôm qua = 0 -> Trừ 1 tim
+                // (Lưu ý: Logic mock này tính 'hôm nay' của state cũ là 'hôm qua' so với hiện tại)
+                if (state.totalMinutes === 0) {
+                    state.hearts = Math.max(0, state.hearts - 1);
+                    if (state.hearts === 0) {
+                        state.streak = 0; // Trừng phạt nặng
+                        state.hearts = 5; // Hồi tim sau khi phạt
+                    }
+                }
+                // Reset thời gian học cho ngày mới
+                state.totalMinutes = 0;
+            }
+            state.lastActiveDate = today;
+            saveState();
+
+            // Hiển thị View tương ứng
+            if (state.isLoggedIn) {
+                showAppView();
+                renderGamification();
+                document.getElementById('user-display-name').textContent = state.email.split('@')[0];
+            } else {
+                showLoginView();
+            }
+        }
+
+        function saveState() {
+            localStorage.setItem('sunlogic_state', JSON.stringify(state));
+        }
+
+        /* =========================================
+           AUTH LOGIC
+           ========================================= */
+        function handleLogin() {
+            const email = document.getElementById('login-email').value;
+            const pass = document.getElementById('login-pass').value;
+            
+            if (email.includes('@') && pass.length > 0) {
+                state.isLoggedIn = true;
+                state.email = email;
+                saveState();
+                
+                document.getElementById('user-display-name').textContent = email.split('@')[0];
+                showAppView();
+                renderGamification();
+            } else {
+                alert("Vui lòng nhập Email hợp lệ và Mật khẩu!");
+            }
+        }
+
+        function handleLogout() {
+            state.isLoggedIn = false;
+            saveState();
+            showLoginView();
+        }
+
+        function showLoginView() {
+            document.getElementById('login-view').style.display = 'flex';
+            document.getElementById('app-view').style.display = 'none';
+        }
+
+        function showAppView() {
+            document.getElementById('login-view').style.display = 'none';
+            document.getElementById('app-view').style.display = 'flex';
+        }
+
+        function renderGamification() {
+            document.getElementById('streak-count').textContent = state.streak;
+            document.getElementById('total-time').textContent = state.totalMinutes;
+            
+            const heartsContainer = document.getElementById('hearts-container');
+            heartsContainer.innerHTML = '';
+            for (let i = 0; i < 5; i++) {
+                if (i < state.hearts) {
+                    heartsContainer.innerHTML += '<span>❤️</span>';
+                } else {
+                    heartsContainer.innerHTML += '<span class="text-gray-300">🤍</span>';
+                }
+            }
+        }
+
+        /* =========================================
+           POMODORO TIMER LOGIC
+           ========================================= */
+        const WORK_TIME = 25 * 60; // 25 minutes in seconds
+        let timeLeft = WORK_TIME;
+        let timerInterval = null;
+        let isRunning = false;
+
+        const timerDisplay = document.getElementById('timer-display');
+        const timerStatus = document.getElementById('timer-status');
+        const pomodoroCircle = document.getElementById('pomodoro-circle');
+        const circleCircumference = 283; // 2 * pi * r (r=45)
+
+        function updateTimerUI() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            
+            // Update SVG circle stroke
+            const offset = circleCircumference - (timeLeft / WORK_TIME) * circleCircumference;
+            pomodoroCircle.style.strokeDashoffset = offset;
+        }
+
+        function startTimer() {
+            if (isRunning) return;
+            isRunning = true;
+            timerStatus.textContent = "Đang tập trung...";
+            timerStatus.classList.add('text-primaryOrange', 'font-bold');
+            
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateTimerUI();
+                
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    isRunning = false;
+                    document.getElementById('ting-sound').play();
+                    
+                    // Thưởng logic
+                    state.totalMinutes += 25;
+                    state.streak += 1;
+                    saveState();
+                    renderGamification();
+                    createConfetti();
+                    
+                    timeLeft = WORK_TIME;
+                    timerStatus.textContent = "Hoàn thành! Nghỉ ngơi nhé.";
+                    timerStatus.classList.remove('text-primaryOrange');
+                    timerStatus.classList.add('text-accentGreen');
+                    updateTimerUI();
+                }
+            }, 1000);
+        }
+
+        function pauseTimer() {
+            clearInterval(timerInterval);
+            isRunning = false;
+            timerStatus.textContent = "Đã tạm dừng";
+            timerStatus.classList.remove('text-primaryOrange', 'text-accentGreen');
+        }
+
+        function resetTimer() {
+            clearInterval(timerInterval);
+            isRunning = false;
+            timeLeft = WORK_TIME;
+            timerStatus.textContent = "Sẵn sàng";
+            timerStatus.classList.remove('text-primaryOrange', 'text-accentGreen');
+            updateTimerUI();
+        }
+
+        /* =========================================
+           CHECKLIST LOGIC
+           ========================================= */
+        function addTask(text = null) {
+            const input = document.getElementById('task-input');
+            const taskText = text || input.value.trim();
+            if (!taskText) return;
+
+            const list = document.getElementById('task-list');
+            const li = document.createElement('li');
+            li.className = "flex items-center gap-3 bg-white/50 p-2 rounded border border-gray-100 shadow-sm transition-all";
+            
+            li.innerHTML = `
+                <input type="checkbox" class="w-4 h-4 text-accentGreen rounded focus:ring-accentGreen cursor-pointer" onchange="toggleTask(this)">
+                <span class="text-sm flex-grow transition-all">${taskText}</span>
+                <button onclick="this.parentElement.remove()" class="text-gray-400 hover:text-red-500"><i class="fa-solid fa-trash text-xs"></i></button>
+            `;
+            list.appendChild(li);
+            if(!text) input.value = '';
+        }
+
+        function toggleTask(checkbox) {
+            const textSpan = checkbox.nextElementSibling;
+            if (checkbox.checked) {
+                textSpan.classList.add('line-through', 'text-gray-400', 'opacity-60');
+            } else {
+                textSpan.classList.remove('line-through', 'text-gray-400', 'opacity-60');
+            }
+        }
+
+        function generateMockSchedule() {
+            addTask("Giai đoạn 1: Ôn lại công thức Nguyên Hàm cơ bản");
+            addTask("Giai đoạn 2: Luyện 5 đề Tích phân từng phần");
+            addTask("Giai đoạn 3: Kiểm tra lỗi sai & Casio bấm nhanh");
+        }
+
+        /* =========================================
+           AI TUTOR LOGIC
+           ========================================= */
+        function toggleChat() {
+            const chatWin = document.getElementById('ai-chat-window');
+            if (chatWin.style.display === 'none') {
+                chatWin.style.display = 'flex';
+                setTimeout(() => chatWin.classList.remove('chat-hidden'), 10);
+            } else {
+                chatWin.classList.add('chat-hidden');
+                setTimeout(() => chatWin.style.display = 'none', 300);
+            }
+        }
+
+        function handleChatEnter(e) {
+            if (e.key === 'Enter') sendChatMessage();
+        }
+
+        function sendChatMessage() {
+            const input = document.getElementById('chat-input');
+            const text = input.value.trim();
+            if (!text) return;
+
+            const chatBox = document.getElementById('chat-messages');
+            
+            // Add User msg
+            chatBox.innerHTML += `
+                <div class="self-end bg-accentBlue text-white px-4 py-2 rounded-2xl rounded-tr-none max-w-[85%] shadow-sm">
+                    ${text}
+                </div>
+            `;
+            input.value = '';
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            // Mock AI Reply (Socratic Method)
+            setTimeout(() => {
+                chatBox.innerHTML += `
+                    <div class="self-start bg-gray-100 text-gray-800 px-4 py-2 rounded-2xl rounded-tl-none max-w-[85%] border shadow-sm">
+                        Hay quá! Thay vì tính tích phân này bằng công thức dài, bạn đã thử dùng phương pháp <b>Kẻ bảng (Múa cột)</b> chưa? Cột 1 đặt u là đa thức, cột 2 đặt dv là phần còn lại. Nháp thử bước 1 xem sao nhé!
+                    </div>
+                `;
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }, 1500);
+        }
+
+        /* =========================================
+           COMMUNITY ANIMATIONS
+           ========================================= */
+        function cheerUp() {
+            const emojis = ['❤️', '🔥', '🌟', '👏'];
+            for(let i=0; i<5; i++) {
+                setTimeout(() => {
+                    const el = document.createElement('div');
+                    el.className = 'flying-emoji';
+                    el.innerText = emojis[Math.floor(Math.random() * emojis.length)];
+                    // Random X path (-1 to 1)
+                    el.style.setProperty('--randX', (Math.random() * 2 - 1).toFixed(2));
+                    document.body.appendChild(el);
+                    
+                    // Remove after animation
+                    setTimeout(() => el.remove(), 2000);
+                }, i * 200);
+            }
+        }
+
+        function createConfetti() {
+            cheerUp(); // Re-use emoji flying logic for streak celebration
+        }
+
+        // Khởi động
+        window.onload = initApp;
+
+    </script>
+</body>
+</html>
